@@ -67,7 +67,7 @@ export function createLabPanel({ params, onReset, onPreset, onModeChange, onPaus
   const panel = document.createElement('aside');
   panel.className = 'panel';
   panel.innerHTML = `
-    <h1>U3 · Forces Instrument</h1>
+    <div class="brand">JELLYFLUX</div>
     <p>LAB: aísla fuerzas, predice y prueba. <strong>P</strong> cambia a PERFORMANCE.</p>
   `;
 
@@ -83,6 +83,7 @@ export function createLabPanel({ params, onReset, onPreset, onModeChange, onPaus
     radialStrength: params.radialStrength.value,
     vortexStrength: params.vortexStrength.value,
     dragCoefficient: params.dragCoefficient.value,
+    recoverStrength: params.recoverStrength.value,
     windX: params.wind.value.x,
     windY: params.wind.value.y
   };
@@ -96,7 +97,7 @@ export function createLabPanel({ params, onReset, onPreset, onModeChange, onPaus
   force.innerHTML = '<h2>Fuerzas</h2>';
   panel.append(force);
 
-  refreshers.push(checkRow(force, 'Radial', params.radialEnabled.value > 0, (v) => params.radialEnabled.value = v ? 1 : 0, () => params.radialEnabled.value > 0));
+  /* refreshers.push(checkRow(force, 'Radial', params.radialEnabled.value > 0, (v) => params.radialEnabled.value = v ? 1 : 0, () => params.radialEnabled.value > 0));
   refreshers.push(rangeRow(force, 'radialStrength', state, 'radialStrength', -8, 8, 0.05, (v) => params.radialStrength.value = v, () => params.radialStrength.value));
   refreshers.push(checkRow(force, 'Vórtice', params.vortexEnabled.value > 0, (v) => params.vortexEnabled.value = v ? 1 : 0, () => params.vortexEnabled.value > 0));
   refreshers.push(rangeRow(force, 'vortexStrength', state, 'vortexStrength', -8, 8, 0.05, (v) => params.vortexStrength.value = v, () => params.vortexStrength.value));
@@ -105,7 +106,90 @@ export function createLabPanel({ params, onReset, onPreset, onModeChange, onPaus
   refreshers.push(checkRow(force, 'Viento', params.windEnabled.value > 0, (v) => params.windEnabled.value = v ? 1 : 0, () => params.windEnabled.value > 0));
   refreshers.push(rangeRow(force, 'wind.x', state, 'windX', -4, 4, 0.05, (v) => params.wind.value.x = v, () => params.wind.value.x));
   refreshers.push(rangeRow(force, 'wind.y', state, 'windY', -4, 4, 0.05, (v) => params.wind.value.y = v, () => params.wind.value.y));
+*/
 
+refreshers.push(
+  rangeRow(
+    force,
+    'Radial',
+    state,
+    'radialStrength',
+    -8,
+    8,
+    0.05,
+    (v) => {
+      params.radialStrength.value = v;
+      params.radialEnabled.value = 1;
+    },
+    () => params.radialStrength.value
+  )
+);
+
+refreshers.push(
+  rangeRow(
+    force,
+    'Vortex',
+    state,
+    'vortexStrength',
+    -8,
+    8,
+    0.05,
+    (v) => {
+      params.vortexStrength.value = v;
+      params.vortexEnabled.value = 1;
+    },
+    () => params.vortexStrength.value
+  )
+);
+
+refreshers.push(
+  rangeRow(
+    force,
+    'Drag',
+    state,
+    'dragCoefficient',
+    0,
+    1,
+    0.01,
+    (v) => {
+      params.dragCoefficient.value = v;
+      params.dragEnabled.value = 1;
+    },
+    () => params.dragCoefficient.value
+  )
+);
+refreshers.push(
+  rangeRow(
+    force,
+    'Recover',
+    state,
+    'recoverStrength',
+    0,
+    4,
+    0.01,
+    (v) => {
+      params.recoverStrength.value = v;
+      params.recoverEnabled.value = v > 0 ? 1 : 0;
+    },
+    () => params.recoverStrength.value
+  )
+);
+refreshers.push(
+  rangeRow(
+    force,
+    'Wind X',
+    state,
+    'windX',
+    -4,
+    4,
+    0.05,
+    (v) => {
+      params.wind.value.x = v;
+      params.windEnabled.value = 1;
+    },
+    () => params.wind.value.x
+  )
+);
   const tests = document.createElement('div');
   tests.className = 'group';
   tests.innerHTML = '<h2>Pruebas de comportamiento</h2><p>Antes de pulsar una prueba, predice qué debería ocurrir.</p>';
