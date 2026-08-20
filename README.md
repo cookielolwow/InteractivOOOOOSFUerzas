@@ -1,4 +1,5 @@
-# U3 · Forces Instrument
+<img width="360" height="360" alt="image" src="https://github.com/user-attachments/assets/9f87f7c2-0b78-4473-ab5f-344287dfae66" />
+
 
 [App desplegada](https://juanferfranco.github.io/forces-instrument-u3/)
 
