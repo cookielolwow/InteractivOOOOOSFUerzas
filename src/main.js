@@ -2,724 +2,184 @@ import * as THREE from 'three/webgpu';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
 import './styles.css';
-
 import { createParameters } from './simulation/parameters.js';
 import { createSimulation } from './simulation/createSimulation.js';
-import { createLabPanel } from './ui/labPanel.js';
 
-const PARTICLE_COUNT = 131072;
+const NUM_AGENTS = 8; 
+const phases = new Float32Array(NUM_AGENTS);
+const freqs = new Float32Array(NUM_AGENTS);
+const types = new Int32Array(NUM_AGENTS);
+
+types.set([0, 0, 1, 1, 2, 2, 3, 3]);
+freqs.set([4.0, 4.2, 8.0, 8.1, 6.0, 6.3, 10.0, 10.5]); 
+
+// --- MOTOR DE AUDIO Y LUCES ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let strobeLights = [];
+
+function playSynth(type, sceneLights) {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  
+  // Flashing lights reactivas por tipo de agente
+  const flash = sceneLights[type];
+  flash.intensity = 150.0; 
+  
+  if (type === 0) { // Kick
+    osc.frequency.setValueAtTime(100, t);
+    osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.3);
+    gain.gain.setValueAtTime(1, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+  } else if (type === 1) { // Hi-hat
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(6000, t);
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+  } else if (type === 2) { // Chord
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(329.63, t); // E4
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.linearRampToValueAtTime(0.01, t + 0.2);
+  } else if (type === 3) { // Glitch Noise
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(Math.random() * 2000, t);
+    gain.gain.setValueAtTime(0.3, t);
+    gain.gain.linearRampToValueAtTime(0.01, t + 0.1);
+  }
+  
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.start(t); osc.stop(t + 0.5);
+}
 
 async function main() {
-
   const mount = document.querySelector('#app');
-
-  if (!WebGPU.isAvailable()) {
-    mount.appendChild(WebGPU.getErrorMessage());
-    throw new Error(
-      'Este proyecto requiere WebGPU para ejecutar compute shaders.'
-    );
-  }
-
-  // ============================================================
-  // SCENE
-  // ============================================================
+  if (!WebGPU.isAvailable()) throw new Error('Requiere WebGPU');
 
   const scene = new THREE.Scene();
-scene.background = new THREE.Color('#030014');
+  scene.background = new THREE.Color('#020108'); // Club oscuro
+  scene.fog = new THREE.FogExp2('#020108', 0.03);
+  
+  // --- EL ESCENARIO ---
+  const floorGeo = new THREE.PlaneGeometry(40, 40);
+  const floorMat = new THREE.MeshStandardMaterial({ color: '#0a0a0a', roughness: 0.1, metalness: 0.5 });
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  scene.add(floor);
 
-scene.fog = new THREE.FogExp2(
-  '#030014',
-  0.035
-);
-  const camera = new THREE.PerspectiveCamera(
-    50,
-    innerWidth / innerHeight,
-    0.05,
-    100
-  );
-
-  camera.position.set(0, 0, 11);
-
-  const renderer = new THREE.WebGPURenderer({
-    antialias: true
+  // Luces de impacto (se asocian a los 4 tipos de sonidos)
+  const colors = ['#F72585', '#4CC9F0', '#7209B7', '#FFE66D'];
+  colors.forEach((c, i) => {
+    const light = new THREE.PointLight(c, 0, 20);
+    light.position.set((i - 1.5) * 4, 1, -5); // Frente al escenario
+    scene.add(light);
+    strobeLights.push(light);
   });
 
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  const ambient = new THREE.AmbientLight('#222', 1.0);
+  scene.add(ambient);
+
+  const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 100);
+  camera.position.set(0, 5, 12);
+
+  const renderer = new THREE.WebGPURenderer({ antialias: true });
   renderer.setSize(innerWidth, innerHeight);
-
   mount.appendChild(renderer.domElement);
-
   await renderer.init();
 
-  // ============================================================
-  // CAMERA
-  // ============================================================
-
-  const orbit = new OrbitControls(
-    camera,
-    renderer.domElement
-  );
-
-  orbit.enableDamping = true;
-  orbit.target.set(0, 0, 0);
-
-  // ============================================================
-  // PARAMETERS + SIMULATION
-  // ============================================================
+  const orbit = new OrbitControls(camera, renderer.domElement);
+  orbit.target.set(0, 1, 0);
 
   const params = createParameters();
+  const simulation = createSimulation({ renderer, scene, params, count: 2048 });
 
-  const simulation = createSimulation({
-    renderer,
-    scene,
-    params,
-    count: PARTICLE_COUNT
-  });
-
-  // ============================================================
-  // LAB HELPERS
-  // ============================================================
-
-  const attractorHelper = new THREE.Mesh(
-    new THREE.SphereGeometry(0.12, 16, 12),
-    new THREE.MeshBasicMaterial({
-      color: '#ffffff'
-    })
-  );
-
-  scene.add(attractorHelper);
-
-  const axes = new THREE.AxesHelper(1.5);
-  scene.add(axes);
-
-  // ============================================================
-  // POINTER → WORLD
-  // ============================================================
-
-  const pointerNdc = new THREE.Vector2();
-  const raycaster = new THREE.Raycaster();
-
-  const interactionPlane = new THREE.Plane(
-    new THREE.Vector3(0, 0, 1),
-    0
-  );
-
-  const hit = new THREE.Vector3();
-
-  addEventListener('pointermove', (event) => {
-
-    pointerNdc.x =
-      (event.clientX / innerWidth) * 2 - 1;
-
-    pointerNdc.y =
-      -(event.clientY / innerHeight) * 2 + 1;
-
-    raycaster.setFromCamera(
-      pointerNdc,
-      camera
-    );
-
-    if (
-      raycaster.ray.intersectPlane(
-        interactionPlane,
-        hit
-      )
-    ) {
-      params.attractor.value.copy(hit);
-      attractorHelper.position.copy(hit);
-    }
-  });
-
-  // ============================================================
-  // MODE
-  // ============================================================
-
-  let paused = false;
-  let mode = 'LAB';
-  let panel;
-
-  const hud = document.createElement('div');
-  hud.className = 'hud';
-  document.body.append(hud);
-
-  // ============================================================
-  // PRESETS — SOLO LAB
-  // ============================================================
-
-  const applyPreset = (id) => {
-
-    params.windEnabled.value = 0;
-    params.radialEnabled.value = 0;
-    params.vortexEnabled.value = 0;
-    params.dragEnabled.value = 0;
-    params.recoverEnabled.value = 0;
-
-    params.wind.value.set(0, 0, 0);
-
-    params.initialSpeed.value = 0;
-
-    if (id === 'inertia') {
-
-      params.initialSpeed.value = 0.8;
-
-    } else if (id === 'wind') {
-
-      params.windEnabled.value = 1;
-      params.wind.value.set(1.5, 0, 0);
-
-    } else if (id === 'attract') {
-
-      params.radialEnabled.value = 1;
-      params.radialStrength.value = 3.0;
-
-    } else if (id === 'repel') {
-
-      params.radialEnabled.value = 1;
-      params.radialStrength.value = -3.0;
-
-    } else if (id === 'vortex') {
-
-      params.radialEnabled.value = 1;
-      params.radialStrength.value = 1.0;
-
-      params.vortexEnabled.value = 1;
-      params.vortexStrength.value = 3.0;
-
-      params.dragEnabled.value = 1;
-      params.dragCoefficient.value = 0.08;
-    }
-
-    simulation.reset();
-    panel?.refresh();
-  };
-
-  // ============================================================
-  // MODE SWITCH
-  // ============================================================
-
-  const setMode = (next) => {
-
-    mode = next;
-
-    const lab = mode === 'LAB';
-
-    panel?.setVisible(lab);
-
-    axes.visible = lab;
-    attractorHelper.visible = lab;
-
-    // La cámara permanece activa en ambos modos.
-    orbit.enabled = true;
-
-    hud.innerHTML = lab
-      ? '<strong>LAB</strong> · P: performance · R: reset · 1–5: pruebas'
-      : '';
-  };
-
-  // ============================================================
-  // LAB PANEL
-  // ============================================================
-
-  panel = createLabPanel({
-    params,
-
-    onReset: () => {
-      simulation.reset();
-      panel?.refresh();
-    },
-
-    onPreset: applyPreset,
-
-    onModeChange: () => {
-      setMode(
-        mode === 'LAB'
-          ? 'PERFORMANCE'
-          : 'LAB'
-      );
-    },
-
-    onPauseChange: () => {
-      paused = !paused;
-    }
-  });
-
-  setMode('LAB');
-
-  // ============================================================
-  // PERFORMANCE CONTROLS
-  // ============================================================
-
+  // --- CONTROLES PERFORMATIVOS ---
   const heldKeys = new Set();
+  addEventListener('keydown', (e) => {
+    if(!e.repeat) heldKeys.add(e.code);
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+  });
+  addEventListener('keyup', (e) => heldKeys.delete(e.code));
 
-
-  let beatEnvelope = 0;
-let clapEnvelope = 0;
-let voiceEnvelope = 0;
-let dropEnvelope = 0;
-
-  const PERFORMANCE_SPEED = {
-    radial: 1.5,
-    vortex: 1.5,
-    drag: 0.20,
-    wind: 1.5,
-    recover: 1
-  };
-
-  const PERFORMANCE_LIMITS = {
-    radial: [-8, 8],
-    vortex: [-8, 8],
-    drag: [0, 0.30],
-    wind: [-4, 4],
-    recover: [0, 4]
-  };
-
-  const performanceKeys = [
-    'KeyA', 'KeyZ',
-    'KeyD', 'KeyC',
-    'KeyF', 'KeyV',
-    'KeyG', 'KeyB',
-    'KeyH', 'KeyN'
-  ];
-
-  const clamp = (value, min, max) =>
-    Math.max(min, Math.min(max, value));
-
-  // ============================================================
-  // KEYDOWN — ÚNICO LISTENER
-  // ============================================================
-
-  addEventListener('keydown', (event) => {
-
-    // P = cambiar modo
-    if (event.code === 'KeyP') {
-
-      if (event.repeat) return;
-
-      setMode(
-        mode === 'LAB'
-          ? 'PERFORMANCE'
-          : 'LAB'
-      );
-
-      return;
-    }
-
-    // R = reset real
-    // Solo se usa como herramienta explícita.
-    if (event.code === 'KeyR') {
-
-      if (event.repeat) return;
-
-      simulation.reset();
-      panel?.refresh();
-
-      return;
-    }
-
-
-// PERFORMANCE
-// ============================================================
-// PERFORMANCE INPUT
-// ============================================================
-
-if (mode === 'PERFORMANCE') {
-
-  // ----------------------------------------------------------
-  // EVENTOS
-  // Se disparan una sola vez por pulsación.
-  // ----------------------------------------------------------
-
-  // J = BEAT / PUM
-  if (event.code === 'KeyJ') {
-    if (event.repeat) return;
-
-    event.preventDefault();
-    beatEnvelope = 1.0;
-    return;
-  }
-
-  // K = CLAP
-  if (event.code === 'KeyK') {
-    if (event.repeat) return;
-
-    event.preventDefault();
-    clapEnvelope = 1.0;
-    return;
-  }
-
-  // L = VOICE
-  if (event.code === 'KeyL') {
-    if (event.repeat) return;
-
-    event.preventDefault();
-    voiceEnvelope = 1.0;
-    return;
-  }
-
-  // SPACE = DROP
-  if (event.code === 'Space') {
-    if (event.repeat) return;
-
-    event.preventDefault();
-    dropEnvelope = 1.0;
-    return;
-  }
-
-  // ----------------------------------------------------------
-  // FADERS
-  // Se mantienen activos mientras la tecla está presionada.
-  // ----------------------------------------------------------
-
-  if (performanceKeys.includes(event.code)) {
-    heldKeys.add(event.code);
-  }
-
-  return;
-}
-
-
-    // LAB
-    if (event.repeat) return;
-
-    if (event.code === 'Digit1') {
-      applyPreset('inertia');
-    }
-
-    if (event.code === 'Digit2') {
-      applyPreset('wind');
-    }
-
-    if (event.code === 'Digit3') {
-      applyPreset('attract');
-    }
-
-    if (event.code === 'Digit4') {
-      applyPreset('repel');
-    }
-
-    if (event.code === 'Digit5') {
-      applyPreset('vortex');
-    }
+  // Raycaster para intervención individual
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  addEventListener('pointermove', (e) => {
+    pointer.x = (e.clientX / innerWidth) * 2 - 1;
+    pointer.y = -(e.clientY / innerHeight) * 2 + 1;
   });
 
-  // ============================================================
-  // KEYUP
-  // ============================================================
-
-  addEventListener('keyup', (event) => {
-    heldKeys.delete(event.code);
-  });
-
-  // ============================================================
-  // FOCUS SAFETY
-  // ============================================================
-
-  addEventListener('blur', () => {
-    heldKeys.clear();
-  });
-
-  // ============================================================
-  // PERFORMANCE UPDATE
-  // ============================================================
-
-  function updatePerformanceControls() {
-
-    if (mode !== 'PERFORMANCE') {
-      return;
-    }
-
-    const dt =
-      params.dt.value *
-      params.timeScale.value;
-
-    // ----------------------------------------------------------
-    // ATTRACT / REPEL
-    // A = subir
-    // Z = bajar
-    // ----------------------------------------------------------
-
-    if (heldKeys.has('KeyA')) {
-
-      params.radialEnabled.value = 1;
-
-      params.radialStrength.value = clamp(
-        params.radialStrength.value +
-          PERFORMANCE_SPEED.radial * dt,
-
-        ...PERFORMANCE_LIMITS.radial
-      );
-    }
-
-    if (heldKeys.has('KeyZ')) {
-
-      params.radialEnabled.value = 1;
-
-      params.radialStrength.value = clamp(
-        params.radialStrength.value -
-          PERFORMANCE_SPEED.radial * dt,
-
-        ...PERFORMANCE_LIMITS.radial
-      );
-    }
-
-    // ----------------------------------------------------------
-    // VORTEX
-    // D = subir
-    // C = bajar
-    // ----------------------------------------------------------
-
-    if (heldKeys.has('KeyD')) {
-
-      params.vortexEnabled.value = 1;
-
-      params.vortexStrength.value = clamp(
-        params.vortexStrength.value +
-          PERFORMANCE_SPEED.vortex * dt,
-
-        ...PERFORMANCE_LIMITS.vortex
-      );
-    }
-
-    if (heldKeys.has('KeyC')) {
-
-      params.vortexEnabled.value = 1;
-
-      params.vortexStrength.value = clamp(
-        params.vortexStrength.value -
-          PERFORMANCE_SPEED.vortex * dt,
-
-        ...PERFORMANCE_LIMITS.vortex
-      );
-    }
-
-    // ----------------------------------------------------------
-    // DRAG
-    // F = subir
-    // V = bajar
-    // ----------------------------------------------------------
-
-    if (heldKeys.has('KeyF')) {
-
-      params.dragEnabled.value = 1;
-
-      params.dragCoefficient.value = clamp(
-        params.dragCoefficient.value +
-          PERFORMANCE_SPEED.drag * dt,
-
-        ...PERFORMANCE_LIMITS.drag
-      );
-    }
-
-    if (heldKeys.has('KeyV')) {
-
-      params.dragCoefficient.value = clamp(
-        params.dragCoefficient.value -
-          PERFORMANCE_SPEED.drag * dt,
-
-        ...PERFORMANCE_LIMITS.drag
-      );
-
-      params.dragEnabled.value =
-        params.dragCoefficient.value > 0
-          ? 1
-          : 0;
-    }
-
-    // ----------------------------------------------------------
-    // WIND
-    // G = subir
-    // B = bajar
-    // ----------------------------------------------------------
-
-    if (heldKeys.has('KeyG')) {
-
-      params.windEnabled.value = 1;
-
-      params.wind.value.x = clamp(
-        params.wind.value.x +
-          PERFORMANCE_SPEED.wind * dt,
-
-        ...PERFORMANCE_LIMITS.wind
-      );
-    }
-
-    if (heldKeys.has('KeyB')) {
-
-      params.wind.value.x = clamp(
-        params.wind.value.x -
-          PERFORMANCE_SPEED.wind * dt,
-
-        ...PERFORMANCE_LIMITS.wind
-      );
-
-      params.windEnabled.value =
-        Math.abs(params.wind.value.x) > 0.001
-          ? 1
-          : 0;
-    }
-
-    // ----------------------------------------------------------
-    // RECOVER
-    // H = subir
-    // N = bajar
-    // ----------------------------------------------------------
-
-    if (heldKeys.has('KeyH')) {
-
-      params.recoverEnabled.value = 1;
-
-      params.recoverStrength.value = clamp(
-        params.recoverStrength.value +
-          PERFORMANCE_SPEED.recover * dt,
-
-        ...PERFORMANCE_LIMITS.recover
-      );
-    }
-
-    if (heldKeys.has('KeyN')) {
-
-      params.recoverStrength.value = clamp(
-        params.recoverStrength.value -
-          PERFORMANCE_SPEED.recover * dt,
-
-        ...PERFORMANCE_LIMITS.recover
-      );
-
-      params.recoverEnabled.value =
-        params.recoverStrength.value > 0.001
-          ? 1
-          : 0;
-    }
-
-// ============================================================
-// BEAT
-// J = disparar
-// ============================================================
-
-beatEnvelope *= Math.exp(-28.0 * dt);
-
-params.beatStrength.value =
-  beatEnvelope * 150.0;
-
-params.beatEnabled.value =
-  beatEnvelope > 0.002 ? 1 : 0;
-// ============================================================
-// CLAP
-// Golpe de contracción
-// ============================================================
-
-clapEnvelope *= Math.exp(
-  -params.clapDecay.value * dt
-);
-
-params.clapStrength.value =
-  clapEnvelope * 150.0;
-
-params.clapEnabled.value =
-  clapEnvelope > 0.002 ? 1 : 0;
-
-
-// ============================================================
-// VOICE
-// Perturbación larga
-// ============================================================
-
-voiceEnvelope *= Math.exp(
-  -params.voiceDecay.value * dt
-);
-
-params.voiceStrength.value =
-  voiceEnvelope * 50.0;
-
-params.voiceEnabled.value =
-  voiceEnvelope > 0.002 ? 1 : 0;
-
-
-// ============================================================
-// DROP
-// Golpe grande combinado
-// ============================================================
-
-dropEnvelope *= Math.exp(
-  -params.dropDecay.value * dt
-);
-
-params.dropStrength.value =
-  dropEnvelope * 100.0;
-
-params.dropEnabled.value =
-  dropEnvelope > 0.002 ? 1 : 0;
-  
-}
-
-
-  
-
-  // ============================================================
-  // RESIZE
-  // ============================================================
-
-  addEventListener('resize', () => {
-
-    camera.aspect =
-      innerWidth / innerHeight;
-
-    camera.updateProjectionMatrix();
-
-    renderer.setSize(
-      innerWidth,
-      innerHeight
-    );
-  });
-
-  // ============================================================
-  // INITIAL RESET
-  // ============================================================
-
+  const clock = new THREE.Clock();
   simulation.reset();
 
-  // ============================================================
-  // FRAME LOOP
-  // ============================================================
-
   renderer.setAnimationLoop(() => {
+    const dt = Math.min(clock.getDelta(), 0.1);
+    
+    // Atenuar luces estroboscópicas progresivamente (Fade out)
+    strobeLights.forEach(light => {
+      light.intensity = Math.max(0, light.intensity - 400 * dt);
+    });
 
-    updatePerformanceControls();
+    // Inputs
+    if (heldKeys.has('KeyA')) params.couplingK.value = Math.min(params.couplingK.value + dt * 5, 20.0);
+    if (heldKeys.has('KeyZ')) params.couplingK.value = Math.max(params.couplingK.value - dt * 5, 0.0);
+    params.dropActive.value = heldKeys.has('Space') ? 1.0 : 0.0;
 
-    if (!paused) {
-      simulation.stepSimulation();
+    // Intervención local con el puntero
+    raycaster.setFromCamera(pointer, camera);
+    const intersects = raycaster.intersectObject(floor);
+    let targetIndex = -1;
+    if (intersects.length > 0 && heldKeys.has('KeyS')) {
+       // Mapear posición de piso a uno de los 8 agentes base
+       const angle = Math.atan2(intersects[0].point.z, intersects[0].point.x) + Math.PI;
+       targetIndex = Math.floor((angle / (Math.PI * 2)) * 8) % 8;
     }
 
+    // UPDATE KURAMOTO
+    const newPhases = new Float32Array(NUM_AGENTS);
+    const K = params.couplingK.value;
+    let sumCos = 0, sumSin = 0;
+
+    for (let i = 0; i < NUM_AGENTS; i++) {
+      let sum = 0;
+      for (let j = 0; j < NUM_AGENTS; j++) {
+        if (i !== j) sum += Math.sin(phases[j] - phases[i]);
+      }
+      
+      let omega = freqs[i];
+      if (params.dropActive.value > 0) omega += (Math.random() - 0.5) * 80.0; // Perturbación
+      if (i === targetIndex) omega += 20.0; // Desincronización manual de un grupo
+      
+      const dTheta = omega + (K / NUM_AGENTS) * sum;
+      newPhases[i] = phases[i] + dTheta * dt;
+
+      // Disparador de salto/audio (Cuando cruzan el pico de la onda, aprox multiplos de 2PI)
+      const prevCycle = Math.floor(phases[i] / (Math.PI * 2));
+      const currCycle = Math.floor(newPhases[i] / (Math.PI * 2));
+      if (currCycle > prevCycle) {
+        playSynth(types[i], strobeLights);
+      }
+
+      sumCos += Math.cos(newPhases[i]);
+      sumSin += Math.sin(newPhases[i]);
+      phases[i] = newPhases[i];
+    }
+
+    // Parámetro de Orden (0 = Desorden, 1 = Organización Estable)
+    const R = Math.sqrt(sumCos*sumCos + sumSin*sumSin) / NUM_AGENTS;
+    
+    // Comunicación del estado colectivo: Iluminación Global
+    // Cuando el rave está sincronizado, la luz de sala pulsa violentamente
+    ambient.intensity = 0.5 + (R * 2.5);
+
+    params.phasesA.value.set(phases[0], phases[1], phases[2], phases[3]);
+    params.phasesB.value.set(phases[4], phases[5], phases[6], phases[7]);
+
+    simulation.stepSimulation();
     orbit.update();
-
-    renderer.render(
-      scene,
-      camera
-    );
+    renderer.render(scene, camera);
   });
-
 }
-// ============================================================
-// ERROR HANDLING
-// ============================================================
 
-main().catch((error) => {
-
-  console.error(error);
-
-  const pre =
-    document.createElement('pre');
-
-  pre.style.cssText = `
-    position: fixed;
-    inset: 16px;
-    white-space: pre-wrap;
-    color: #fff;
-    z-index: 50;
-  `;
-
-  pre.textContent =
-    String(error?.stack || error);
-
-  document.body.append(pre);
-});
+main().catch(console.error);
