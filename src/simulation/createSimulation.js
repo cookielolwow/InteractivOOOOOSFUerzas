@@ -5,7 +5,8 @@ import {
 } from 'three/addons/loaders/GLTFLoader.js';
 
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-
+const RAVER_MODEL_URL =
+  `${import.meta.env.BASE_URL}raver.glb`;
 
 // ============================================================
 // CONFIG
@@ -993,15 +994,10 @@ function applyPersonalityMaterial(
 export async function createSimulation({
 
   scene,
-
   renderer,
-
   params,
-
   count = 144,
-
-  modelUrl =
-    '/raver.glb'
+  modelUrl = RAVER_MODEL_URL
 
 } = {}) {
 
