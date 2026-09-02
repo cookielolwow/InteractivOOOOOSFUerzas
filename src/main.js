@@ -1,24 +1,47 @@
 import * as THREE from 'three/webgpu';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+import {
+  OrbitControls
+} from 'three/addons/controls/OrbitControls.js';
+
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
 
-import { pass } from 'three/tsl';
-import { bloom } from 'three/addons/tsl/display/BloomNode.js';
+import {
+  pass
+} from 'three/tsl';
+
+import {
+  bloom
+} from 'three/addons/tsl/display/BloomNode.js';
 
 import './styles.css';
 
-import { createParameters } from './simulation/parameters.js';
-import { createSimulation } from './simulation/createSimulation.js';
-import { createLabPanel } from './ui/labPanel.js';
+import {
+  createParameters
+} from './simulation/parameters.js';
+
+import {
+  createSimulation
+} from './simulation/createSimulation.js';
+
+import {
+  createDanceFloor
+} from './floor/Dancefloor.js';
+
+import {
+  createLabPanel
+} from './ui/labPanel.js';
 
 
 // ============================================================
 // CONFIG
 // ============================================================
 
-const NUM_AGENTS = 144;
+const NUM_AGENTS =
+  96;
 
-const BASE_BPM = 138;
+const BASE_BPM =
+  138;
 
 const BEAT_SECONDS =
   60 /
@@ -52,7 +75,9 @@ const types =
     NUM_AGENTS
   );
 
+
 const frequencyVariation = [
+
   -0.025,
   -0.018,
   -0.012,
@@ -61,25 +86,149 @@ const frequencyVariation = [
    0.006,
    0.012,
    0.018
+
 ];
 
-let omegaSpread = 1.0;
+
+let omegaSpread =
+  1.0;
+
+
+// ============================================================
+// VISUAL
+// ============================================================
+
+let ambient =
+  null;
+
+let floorMaterial =
+  null;
+
+let bloomPass =
+  null;
+
+let visualMode =
+  1;
+
+let jumpAmount =
+  1.0;
+
+let floorPulse =
+  0;
+
+let cameraShake =
+  0;
+
+let cameraIntensity =
+  1.0;
+
+
+// ============================================================
+// COLORES
+// ============================================================
+
+const raveColors = [
+
+  '#FF1493',
+  '#8A4DFF',
+  '#00FF00',
+  '#00FFFF',
+  '#FF00FF',
+  '#7CFF00'
+
+];
+
+
+const colorObjects =
+  raveColors.map(
+    color =>
+      new THREE.Color(
+        color
+      )
+  );
+
+
+// ============================================================
+// BACKGROUND
+// ============================================================
+
+const backgroundColor =
+  new THREE.Color(
+    '#030305'
+  );
+
+
+// ============================================================
+// ESTADOS
+// ============================================================
+
+let collectiveState =
+  'DESORDEN';
+
+
+// ============================================================
+// LUCES
+// ============================================================
+
+const clubLights =
+  [];
+
+const overheadLights =
+  [];
+
+
+// ============================================================
+// VISUALES
+// ============================================================
+
+const discoBands =
+  [];
+
+const laserPlanes =
+  [];
+
+const impactRings =
+  [];
+
+
+// ============================================================
+// AUDIO
+// ============================================================
+
+let audioCtx =
+  null;
+
+let masterGain =
+  null;
+
+let compressor =
+  null;
+
+let distortion =
+  null;
+
+let noiseBuffer =
+  null;
+
+let musicStarted =
+  false;
+
+let musicStartTime =
+  0;
+
+let lastScheduledBeat =
+  -1;
+
+let lastScheduledEighth =
+  -1;
+
+let lastScheduledSixteenth =
+  -1;
 
 
 // ============================================================
 // FRECUENCIAS NATURALES
 // ============================================================
-//
-// 36 KICK
-// 24 RUMBLE
-// 18 CLAP
-// 30 CLOSED HAT
-// 18 OPEN HAT
-// 18 ACID
-//
-// Estas frecuencias siguen siendo parte del modelo.
-// No se modifica la lógica de audio.
-//
 
 function updateNaturalFrequencies() {
 
@@ -95,56 +244,80 @@ function updateNaturalFrequencies() {
         frequencyVariation.length
       ];
 
+
     let bpm;
+
 
     if (
       i < 36
     ) {
 
-      types[i] = 0;
-      bpm = 138;
+      types[i] =
+        0;
+
+      bpm =
+        138;
 
     } else if (
       i < 60
     ) {
 
-      types[i] = 1;
-      bpm = 69;
+      types[i] =
+        1;
+
+      bpm =
+        69;
 
     } else if (
       i < 78
     ) {
 
-      types[i] = 2;
-      bpm = 138;
+      types[i] =
+        2;
+
+      bpm =
+        138;
 
     } else if (
       i < 108
     ) {
 
-      types[i] = 3;
-      bpm = 276;
+      types[i] =
+        3;
+
+      bpm =
+        276;
 
     } else if (
       i < 126
     ) {
 
-      types[i] = 4;
-      bpm = 276;
+      types[i] =
+        4;
+
+      bpm =
+        276;
 
     } else {
 
-      types[i] = 5;
-      bpm = 207;
+      types[i] =
+        5;
+
+      bpm =
+        207;
 
     }
 
+
     freqs[i] =
+
       2 *
       Math.PI *
       (
-        bpm / 60
+        bpm /
+        60
       ) *
+
       (
         1 +
         variation *
@@ -155,104 +328,12 @@ function updateNaturalFrequencies() {
 
 }
 
+
 updateNaturalFrequencies();
 
 
 // ============================================================
-// AUDIO
-// ============================================================
-
-let audioCtx = null;
-let masterGain = null;
-let compressor = null;
-let distortion = null;
-let noiseBuffer = null;
-
-let musicStarted = false;
-let musicStartTime = 0;
-
-let lastScheduledBeat = -1;
-let lastScheduledEighth = -1;
-let lastScheduledSixteenth = -1;
-
-
-// ============================================================
-// VISUAL STATE
-// ============================================================
-
-let flashPulse = 0;
-let floorPulse = 0;
-let cameraShake = 0;
-
-
-// ============================================================
-// DISCOTECA VISUAL
-// ============================================================
-
-let discoPulse = 0;
-let discoBlackout = 0;
-let discoFlash = 0;
-
-let lastVisualBeat = -1;
-let lastVisualEighth = -1;
-
-
-// ============================================================
-// COLORS
-// ============================================================
-
-const raveColors = [
-
-  '#72FF00', // KICK
-  '#8A00FF', // RUMBLE
-  '#FFFFFF', // CLAP
-  '#00FF8A', // CLOSED HAT
-  '#B100FF', // OPEN HAT
-  '#DFFF00'  // ACID
-
-];
-
-const colorObjects =
-  raveColors.map(
-    value =>
-      new THREE.Color(value)
-  );
-
-
-// ============================================================
-// BACKGROUND
-// ============================================================
-
-const backgroundColor =
-  new THREE.Color(
-    '#000001'
-  );
-
-const floorGlowColor =
-  new THREE.Color(
-    '#72FF00'
-  );
-
-
-// ============================================================
-// STATE
-// ============================================================
-
-let collectiveState =
-  'CHAOS';
-
-
-// ============================================================
-// LIGHTS
-// ============================================================
-
-let strobeLights = [];
-let ceilingLights = [];
-let whiteFlash = null;
-
-
-// ============================================================
-// AUDIO
+// AUDIO SETUP
 // ============================================================
 
 function setupAudio() {
@@ -265,31 +346,39 @@ function setupAudio() {
 
   }
 
+
   audioCtx =
     new (
       window.AudioContext ||
       window.webkitAudioContext
     )();
 
+
   masterGain =
     audioCtx.createGain();
+
 
   masterGain.gain.value =
     0.56;
 
+
   distortion =
     audioCtx.createWaveShaper();
+
 
   distortion.curve =
     createDistortionCurve(
       26
     );
 
+
   distortion.oversample =
     '2x';
 
+
   compressor =
     audioCtx.createDynamicsCompressor();
+
 
   compressor.threshold.value =
     -18;
@@ -306,6 +395,7 @@ function setupAudio() {
   compressor.release.value =
     0.10;
 
+
   masterGain
     .connect(
       distortion
@@ -317,6 +407,7 @@ function setupAudio() {
       audioCtx.destination
     );
 
+
   noiseBuffer =
     createNoiseBuffer();
 
@@ -324,7 +415,7 @@ function setupAudio() {
 
 
 // ============================================================
-// DISTORTION
+// DISTORSIÓN
 // ============================================================
 
 function createDistortionCurve(
@@ -334,10 +425,12 @@ function createDistortionCurve(
   const samples =
     44100;
 
+
   const curve =
     new Float32Array(
       samples
     );
+
 
   for (
     let i = 0;
@@ -350,13 +443,17 @@ function createDistortionCurve(
       samples -
       1;
 
+
     curve[i] =
+
       (
         3 +
         amount
       ) *
+
       x *
       20 /
+
       (
         Math.PI +
         amount *
@@ -364,6 +461,7 @@ function createDistortionCurve(
       );
 
   }
+
 
   return curve;
 
@@ -379,20 +477,27 @@ function createNoiseBuffer() {
   const duration =
     1;
 
+
   const buffer =
     audioCtx.createBuffer(
+
       1,
+
       Math.floor(
         audioCtx.sampleRate *
         duration
       ),
+
       audioCtx.sampleRate
+
     );
+
 
   const data =
     buffer.getChannelData(
       0
     );
+
 
   for (
     let i = 0;
@@ -405,14 +510,18 @@ function createNoiseBuffer() {
       i /
       data.length;
 
+
     data[i] =
+
       (
-        Math.random() * 2 -
+        Math.random() *
+        2 -
         1
       ) *
       fade;
 
   }
+
 
   return buffer;
 
@@ -431,37 +540,46 @@ function playKick(
     return;
   }
 
+
   const t =
     audioCtx.currentTime;
+
 
   const osc =
     audioCtx.createOscillator();
 
+
   const gain =
     audioCtx.createGain();
 
+
   osc.type =
     'sine';
+
 
   osc.frequency.setValueAtTime(
     165,
     t
   );
 
+
   osc.frequency.exponentialRampToValueAtTime(
     43,
     t + 0.075
   );
+
 
   osc.frequency.exponentialRampToValueAtTime(
     38,
     t + 0.18
   );
 
+
   gain.gain.setValueAtTime(
     0.001,
     t
   );
+
 
   gain.gain.exponentialRampToValueAtTime(
     0.03 +
@@ -470,16 +588,24 @@ function playKick(
     t + 0.004
   );
 
+
   gain.gain.exponentialRampToValueAtTime(
     0.001,
     t + 0.23
   );
 
+
   osc
-    .connect(gain)
-    .connect(masterGain);
+    .connect(
+      gain
+    )
+    .connect(
+      masterGain
+    );
+
 
   osc.start(t);
+
 
   osc.stop(
     t + 0.25
@@ -500,37 +626,48 @@ function playRumble(
     return;
   }
 
+
   const t =
     audioCtx.currentTime;
+
 
   const osc =
     audioCtx.createOscillator();
 
+
   const filter =
     audioCtx.createBiquadFilter();
+
 
   const gain =
     audioCtx.createGain();
 
+
   osc.type =
     'sawtooth';
+
 
   osc.frequency.value =
     47;
 
+
   filter.type =
     'lowpass';
+
 
   filter.frequency.value =
     135;
 
+
   filter.Q.value =
     5;
+
 
   gain.gain.setValueAtTime(
     0.001,
     t
   );
+
 
   gain.gain.exponentialRampToValueAtTime(
     0.015 +
@@ -539,17 +676,27 @@ function playRumble(
     t + 0.012
   );
 
+
   gain.gain.exponentialRampToValueAtTime(
     0.001,
     t + 0.50
   );
 
+
   osc
-    .connect(filter)
-    .connect(gain)
-    .connect(masterGain);
+    .connect(
+      filter
+    )
+    .connect(
+      gain
+    )
+    .connect(
+      masterGain
+    );
+
 
   osc.start(t);
+
 
   osc.stop(
     t + 0.53
@@ -570,31 +717,40 @@ function playHat(
     return;
   }
 
+
   const source =
     audioCtx.createBufferSource();
+
 
   const filter =
     audioCtx.createBiquadFilter();
 
+
   const gain =
     audioCtx.createGain();
+
 
   source.buffer =
     noiseBuffer;
 
+
   filter.type =
     'highpass';
+
 
   filter.frequency.value =
     8000;
 
+
   const t =
     audioCtx.currentTime;
+
 
   gain.gain.setValueAtTime(
     0.001,
     t
   );
+
 
   gain.gain.exponentialRampToValueAtTime(
     0.02 +
@@ -603,17 +759,27 @@ function playHat(
     t + 0.001
   );
 
+
   gain.gain.exponentialRampToValueAtTime(
     0.001,
     t + 0.035
   );
 
+
   source
-    .connect(filter)
-    .connect(gain)
-    .connect(masterGain);
+    .connect(
+      filter
+    )
+    .connect(
+      gain
+    )
+    .connect(
+      masterGain
+    );
+
 
   source.start(t);
+
 
   source.stop(
     t + 0.04
@@ -634,31 +800,40 @@ function playOpenHat(
     return;
   }
 
+
   const source =
     audioCtx.createBufferSource();
+
 
   const filter =
     audioCtx.createBiquadFilter();
 
+
   const gain =
     audioCtx.createGain();
+
 
   source.buffer =
     noiseBuffer;
 
+
   filter.type =
     'highpass';
+
 
   filter.frequency.value =
     5000;
 
+
   const t =
     audioCtx.currentTime;
+
 
   gain.gain.setValueAtTime(
     0.001,
     t
   );
+
 
   gain.gain.exponentialRampToValueAtTime(
     0.02 +
@@ -667,17 +842,27 @@ function playOpenHat(
     t + 0.002
   );
 
+
   gain.gain.exponentialRampToValueAtTime(
     0.001,
     t + 0.15
   );
 
+
   source
-    .connect(filter)
-    .connect(gain)
-    .connect(masterGain);
+    .connect(
+      filter
+    )
+    .connect(
+      gain
+    )
+    .connect(
+      masterGain
+    );
+
 
   source.start(t);
+
 
   source.stop(
     t + 0.17
@@ -698,17 +883,43 @@ function playClap(
     return;
   }
 
+
   const t =
     audioCtx.currentTime;
 
+
   const bursts = [
 
-    [0.000, 2100, 0.30, 0.028],
-    [0.012, 3300, 0.22, 0.023],
-    [0.026, 1800, 0.18, 0.034],
-    [0.042, 1200, 0.08, 0.045]
+    [
+      0.000,
+      2100,
+      0.30,
+      0.028
+    ],
+
+    [
+      0.012,
+      3300,
+      0.22,
+      0.023
+    ],
+
+    [
+      0.026,
+      1800,
+      0.18,
+      0.034
+    ],
+
+    [
+      0.042,
+      1200,
+      0.08,
+      0.045
+    ]
 
   ];
+
 
   bursts.forEach(
     burst => {
@@ -716,32 +927,41 @@ function playClap(
       const source =
         audioCtx.createBufferSource();
 
+
       const filter =
         audioCtx.createBiquadFilter();
+
 
       const gain =
         audioCtx.createGain();
 
+
       source.buffer =
         noiseBuffer;
+
 
       filter.type =
         'bandpass';
 
+
       filter.frequency.value =
         burst[1];
 
+
       filter.Q.value =
         2.2;
+
 
       const start =
         t +
         burst[0];
 
+
       gain.gain.setValueAtTime(
         0.001,
         start
       );
+
 
       gain.gain.exponentialRampToValueAtTime(
         burst[2] *
@@ -749,20 +969,30 @@ function playClap(
         start + 0.001
       );
 
+
       gain.gain.exponentialRampToValueAtTime(
         0.001,
         start +
         burst[3]
       );
 
+
       source
-        .connect(filter)
-        .connect(gain)
-        .connect(masterGain);
+        .connect(
+          filter
+        )
+        .connect(
+          gain
+        )
+        .connect(
+          masterGain
+        );
+
 
       source.start(
         start
       );
+
 
       source.stop(
         start +
@@ -789,8 +1019,10 @@ function playAcid(
     return;
   }
 
+
   const t =
     audioCtx.currentTime;
+
 
   const notes = [
 
@@ -805,31 +1037,39 @@ function playAcid(
 
   ];
 
+
   const note =
     notes[
       step %
       notes.length
     ];
 
+
   const osc =
     audioCtx.createOscillator();
+
 
   const filter =
     audioCtx.createBiquadFilter();
 
+
   const highpass =
     audioCtx.createBiquadFilter();
+
 
   const gain =
     audioCtx.createGain();
 
+
   osc.type =
     'sawtooth';
+
 
   osc.frequency.setValueAtTime(
     note,
     t
   );
+
 
   osc.frequency.exponentialRampToValueAtTime(
     note *
@@ -841,16 +1081,20 @@ function playAcid(
     t + 0.05
   );
 
+
   filter.type =
     'lowpass';
 
+
   filter.Q.value =
     17;
+
 
   filter.frequency.setValueAtTime(
     4200,
     t
   );
+
 
   filter.frequency.exponentialRampToValueAtTime(
     240 +
@@ -859,16 +1103,20 @@ function playAcid(
     t + 0.11
   );
 
+
   highpass.type =
     'highpass';
 
+
   highpass.frequency.value =
     70;
+
 
   gain.gain.setValueAtTime(
     0.001,
     t
   );
+
 
   gain.gain.exponentialRampToValueAtTime(
     0.012 +
@@ -877,18 +1125,30 @@ function playAcid(
     t + 0.003
   );
 
+
   gain.gain.exponentialRampToValueAtTime(
     0.001,
     t + 0.16
   );
 
+
   osc
-    .connect(filter)
-    .connect(highpass)
-    .connect(gain)
-    .connect(masterGain);
+    .connect(
+      filter
+    )
+    .connect(
+      highpass
+    )
+    .connect(
+      gain
+    )
+    .connect(
+      masterGain
+    );
+
 
   osc.start(t);
+
 
   osc.stop(
     t + 0.18
@@ -909,8 +1169,10 @@ function playStab(
     return;
   }
 
+
   const t =
     audioCtx.currentTime;
+
 
   const notes = [
 
@@ -921,34 +1183,43 @@ function playStab(
 
   ];
 
+
   notes.forEach(
     note => {
 
       const osc =
         audioCtx.createOscillator();
 
+
       const filter =
         audioCtx.createBiquadFilter();
+
 
       const gain =
         audioCtx.createGain();
 
+
       osc.type =
         'sawtooth';
+
 
       osc.frequency.value =
         note;
 
+
       filter.type =
         'highpass';
 
+
       filter.frequency.value =
         650;
+
 
       gain.gain.setValueAtTime(
         0.001,
         t
       );
+
 
       gain.gain.exponentialRampToValueAtTime(
         0.018 *
@@ -956,17 +1227,27 @@ function playStab(
         t + 0.003
       );
 
+
       gain.gain.exponentialRampToValueAtTime(
         0.001,
         t + 0.075
       );
 
+
       osc
-        .connect(filter)
-        .connect(gain)
-        .connect(masterGain);
+        .connect(
+          filter
+        )
+        .connect(
+          gain
+        )
+        .connect(
+          masterGain
+        );
+
 
       osc.start(t);
+
 
       osc.stop(
         t + 0.09
@@ -979,7 +1260,7 @@ function playStab(
 
 
 // ============================================================
-// BUILD NOISE
+// BUILD
 // ============================================================
 
 function playBuildNoise(
@@ -990,41 +1271,52 @@ function playBuildNoise(
     return;
   }
 
+
   const t =
     audioCtx.currentTime;
+
 
   const source =
     audioCtx.createBufferSource();
 
+
   const filter =
     audioCtx.createBiquadFilter();
+
 
   const gain =
     audioCtx.createGain();
 
+
   source.buffer =
     noiseBuffer;
 
+
   filter.type =
     'bandpass';
+
 
   filter.frequency.setValueAtTime(
     700,
     t
   );
 
+
   filter.frequency.exponentialRampToValueAtTime(
     9500,
     t + 0.42
   );
 
+
   filter.Q.value =
     2;
+
 
   gain.gain.setValueAtTime(
     0.001,
     t
   );
+
 
   gain.gain.linearRampToValueAtTime(
     0.10 *
@@ -1032,17 +1324,27 @@ function playBuildNoise(
     t + 0.32
   );
 
+
   gain.gain.exponentialRampToValueAtTime(
     0.001,
     t + 0.44
   );
 
+
   source
-    .connect(filter)
-    .connect(gain)
-    .connect(masterGain);
+    .connect(
+      filter
+    )
+    .connect(
+      gain
+    )
+    .connect(
+      masterGain
+    );
+
 
   source.start(t);
+
 
   source.stop(
     t + 0.46
@@ -1059,6 +1361,7 @@ async function startMusic() {
 
   setupAudio();
 
+
   if (
     audioCtx.state ===
     'suspended'
@@ -1068,6 +1371,7 @@ async function startMusic() {
 
   }
 
+
   if (
     !musicStarted
   ) {
@@ -1075,22 +1379,20 @@ async function startMusic() {
     musicStarted =
       true;
 
+
     musicStartTime =
       audioCtx.currentTime;
+
 
     lastScheduledBeat =
       -1;
 
+
     lastScheduledEighth =
       -1;
 
+
     lastScheduledSixteenth =
-      -1;
-
-    lastVisualBeat =
-      -1;
-
-    lastVisualEighth =
       -1;
 
   }
@@ -1099,11 +1401,8 @@ async function startMusic() {
 
 
 // ============================================================
-// MUSIC SCHEDULER
+// AUDIO SCHEDULER
 // ============================================================
-// NO TOCAR.
-// La música permanece exactamente igual.
-//
 
 function updateMusic(
   R
@@ -1118,28 +1417,42 @@ function updateMusic(
 
   }
 
+
   const elapsed =
     audioCtx.currentTime -
     musicStartTime;
 
+
   const beatIndex =
     Math.floor(
+
       elapsed /
       BEAT_SECONDS
+
     );
+
 
   const eighthIndex =
     Math.floor(
+
       elapsed /
       EIGHTH_SECONDS
+
     );
+
 
   const sixteenthIndex =
     Math.floor(
+
       elapsed /
       SIXTEENTH_SECONDS
+
     );
 
+
+  // ==========================================================
+  // BEAT
+  // ==========================================================
 
   if (
     beatIndex >
@@ -1149,11 +1462,13 @@ function updateMusic(
     lastScheduledBeat =
       beatIndex;
 
+
     playKick(
       0.78 +
       R *
       0.22
     );
+
 
     playRumble(
       0.28 +
@@ -1161,9 +1476,11 @@ function updateMusic(
       0.72
     );
 
+
     const beatInBar =
       beatIndex %
       4;
+
 
     if (
       beatInBar === 1 ||
@@ -1178,6 +1495,7 @@ function updateMusic(
 
     }
 
+
     if (
       R > 0.52 &&
       beatInBar === 3
@@ -1189,47 +1507,36 @@ function updateMusic(
 
     }
 
-    flashPulse =
-      Math.max(
-        flashPulse,
-        0.72 +
-        R *
-        0.28
-      );
 
     floorPulse =
       Math.max(
+
         floorPulse,
+
         0.68 +
         R *
         0.28
+
       );
+
 
     cameraShake =
       Math.max(
+
         cameraShake,
+
         0.02 +
         R *
         0.035
+
       );
-
-    if (
-      R >
-      0.35
-    ) {
-
-      whiteFlash.intensity =
-        Math.max(
-          whiteFlash.intensity,
-          900 +
-          R *
-          1400
-        );
-
-    }
 
   }
 
+
+  // ==========================================================
+  // EIGHTHS
+  // ==========================================================
 
   if (
     eighthIndex >
@@ -1239,12 +1546,16 @@ function updateMusic(
     lastScheduledEighth =
       eighthIndex;
 
+
     const subdivision =
       eighthIndex %
       8;
 
+
     if (
-      subdivision % 2 === 0
+      subdivision %
+      2 ===
+      0
     ) {
 
       playHat(
@@ -1254,8 +1565,7 @@ function updateMusic(
       );
 
     } else if (
-      R >
-      0.35
+      R > 0.35
     ) {
 
       playHat(
@@ -1266,14 +1576,14 @@ function updateMusic(
 
     }
 
+
     if (
       subdivision === 3 ||
       subdivision === 7
     ) {
 
       if (
-        R >
-        0.30
+        R > 0.30
       ) {
 
         playOpenHat(
@@ -1286,9 +1596,9 @@ function updateMusic(
 
     }
 
+
     if (
-      R >
-      0.22
+      R > 0.22
     ) {
 
       const acidProbability =
@@ -1296,20 +1606,27 @@ function updateMusic(
         R *
         0.72;
 
+
       if (
         Math.random() <
         acidProbability
       ) {
 
         playAcid(
+
           THREE.MathUtils.clamp(
+
             0.30 +
             R *
             0.75,
+
             0,
             1
+
           ),
+
           eighthIndex
+
         );
 
       }
@@ -1319,6 +1636,10 @@ function updateMusic(
   }
 
 
+  // ==========================================================
+  // SIXTEENTHS
+  // ==========================================================
+
   if (
     sixteenthIndex >
     lastScheduledSixteenth
@@ -1327,14 +1648,15 @@ function updateMusic(
     lastScheduledSixteenth =
       sixteenthIndex;
 
+
     if (
-      R >
-      0.60
+      R > 0.60
     ) {
 
       const s =
         sixteenthIndex %
         16;
+
 
       if (
         s === 3 ||
@@ -1344,22 +1666,27 @@ function updateMusic(
       ) {
 
         playAcid(
+
           (
             R -
             0.40
           ) *
           1.35,
+
           s
+
         );
 
       }
 
     }
 
+
     if (
-      R >
-      0.72 &&
-      sixteenthIndex % 32 === 28
+      R > 0.72 &&
+      sixteenthIndex %
+      32 ===
+      28
     ) {
 
       playBuildNoise(
@@ -1374,91 +1701,658 @@ function updateMusic(
 
 
 // ============================================================
-// GROUP ENERGY
+// DISCO VISUALS
 // ============================================================
 
-function getGroupEnergy(
-  impacts
+function createDiscoVisuals(
+  scene
 ) {
 
-  const groupEnergy =
-    new Float32Array(
-      raveColors.length
+  // ==========================================================
+  // ONDAS
+  // ==========================================================
+
+  const ringGeometry =
+    new THREE.RingGeometry(
+
+      3.5,
+
+      3.54,
+
+      96
+
     );
 
-  if (
-    !impacts ||
-    impacts.length === 0
-  ) {
-
-    return groupEnergy;
-
-  }
-
-  const sums =
-    new Float32Array(
-      raveColors.length
-    );
-
-  for (
-    const impact of impacts
-  ) {
-
-    const type =
-      impact.type;
-
-    if (
-      type < 0 ||
-      type >= raveColors.length
-    ) {
-
-      continue;
-
-    }
-
-    sums[type] +=
-      impact.strength;
-
-  }
-
-  let maxEnergy =
-    0;
 
   for (
     let i = 0;
-    i < sums.length;
+    i < 3;
     i++
   ) {
 
-    maxEnergy =
+    const material =
+      new THREE.MeshBasicMaterial({
+
+        color:
+          raveColors[
+            i
+          ],
+
+        transparent:
+          true,
+
+        opacity:
+          0,
+
+        side:
+          THREE.DoubleSide,
+
+        depthWrite:
+          false
+
+      });
+
+
+    const ring =
+      new THREE.Mesh(
+
+        ringGeometry,
+
+        material
+
+      );
+
+
+    ring.rotation.x =
+      -Math.PI / 2;
+
+
+    ring.position.y =
+      0.025;
+
+
+    ring.userData.baseScale =
+      1 +
+      i *
+      1.8;
+
+
+    scene.add(
+      ring
+    );
+
+
+    discoBands.push(
+      ring
+    );
+
+  }
+
+
+  // ==========================================================
+  // LÁSERES
+  // ==========================================================
+
+  for (
+    let i = 0;
+    i < 6;
+    i++
+  ) {
+
+    const geometry =
+      new THREE.PlaneGeometry(
+
+        0.05,
+
+        34
+
+      );
+
+
+    const material =
+      new THREE.MeshBasicMaterial({
+
+        color:
+          raveColors[
+            i
+          ],
+
+        transparent:
+          true,
+
+        opacity:
+          0,
+
+        side:
+          THREE.DoubleSide,
+
+        depthWrite:
+          false
+
+      });
+
+
+    const plane =
+      new THREE.Mesh(
+
+        geometry,
+
+        material
+
+      );
+
+
+    plane.position.y =
+      6;
+
+
+    plane.rotation.z =
+      (
+        Math.PI *
+        2 /
+        6
+      ) *
+      i;
+
+
+    scene.add(
+      plane
+    );
+
+
+    laserPlanes.push(
+      plane
+    );
+
+  }
+
+}
+
+
+// ============================================================
+// CLUB LIGHTING
+// ============================================================
+
+function updateClubLighting(
+  elapsed,
+  R
+) {
+
+  // ==========================================================
+  // ESTADO -> COLOR
+  // ==========================================================
+
+  let hue =
+    0.74;
+
+
+  if (
+    collectiveState ===
+    'PARCIAL'
+  ) {
+
+    hue =
+      0.81;
+
+  }
+
+
+  if (
+    collectiveState ===
+    'ESTABLE'
+  ) {
+
+    hue =
+      0.28;
+
+  }
+
+
+  backgroundColor.setHSL(
+
+    hue,
+
+    0.84,
+
+    0.006 +
+    R *
+    0.014
+
+  );
+
+
+  // ==========================================================
+  // AMBIENTE
+  // ==========================================================
+
+  ambient.intensity =
+
+    0.12 +
+    R *
+    0.08;
+
+
+  // ==========================================================
+  // PISO
+  // ==========================================================
+
+  floorMaterial.emissiveIntensity =
+
+    0.008 +
+
+    R *
+    0.025 +
+
+    floorPulse *
+    0.035;
+
+
+  // ==========================================================
+  // BEAT VISUAL
+  // ==========================================================
+
+  const beatPosition =
+
+    (
+      elapsed %
+      BEAT_SECONDS
+    ) /
+    BEAT_SECONDS;
+
+
+  const beatPulse =
+
+    Math.pow(
+
       Math.max(
-        maxEnergy,
-        sums[i]
+
+        0,
+
+        Math.sin(
+
+          beatPosition *
+          Math.PI *
+          2
+
+        )
+
+      ),
+
+      8
+
+    );
+
+
+  // ==========================================================
+  // LUCES LATERALES
+  // ==========================================================
+
+  for (
+    let i = 0;
+    i < clubLights.length;
+    i++
+  ) {
+
+    const light =
+      clubLights[i];
+
+
+    const localPulse =
+
+      Math.pow(
+
+        Math.max(
+
+          0,
+
+          Math.sin(
+
+            beatPosition *
+            Math.PI *
+            2 +
+            i *
+            0.9
+
+          )
+
+        ),
+
+        7
+
+      );
+
+
+    light.intensity =
+
+      120 +
+
+      localPulse *
+      (
+        400 +
+        R *
+        700
+      );
+
+
+    light.color.copy(
+
+      colorObjects[
+
+        i %
+        colorObjects.length
+
+      ]
+
+    );
+
+
+    light.position.y =
+
+      4.5 +
+
+      Math.sin(
+
+        elapsed *
+        0.65 +
+        i
+
+      ) *
+      0.4;
+
+  }
+
+
+  // ==========================================================
+  // LUCES DE TECHO
+  // ==========================================================
+
+  for (
+    let i = 0;
+    i < overheadLights.length;
+    i++
+  ) {
+
+    const light =
+      overheadLights[i];
+
+
+    light.target.position.x =
+
+      Math.sin(
+
+        elapsed *
+        (
+          0.25 +
+          i *
+          0.02
+        )
+
+      ) *
+      10;
+
+
+    light.target.position.z =
+
+      Math.cos(
+
+        elapsed *
+        0.20 +
+        i *
+        0.8
+
+      ) *
+      7;
+
+
+    const pulse =
+
+      Math.pow(
+
+        Math.max(
+
+          0,
+
+          Math.sin(
+
+            beatPosition *
+            Math.PI *
+            2 +
+            i *
+            0.7
+
+          )
+
+        ),
+
+        5
+
+      );
+
+
+    light.intensity =
+
+      70 +
+
+      pulse *
+      (
+        500 +
+        R *
+        700
       );
 
   }
 
-  if (
-    maxEnergy <= 0
-  ) {
 
-    return groupEnergy;
+  // ==========================================================
+  // LÁSERES
+  // ==========================================================
 
-  }
+  laserPlanes.forEach(
 
-  for (
-    let i = 0;
-    i < sums.length;
-    i++
-  ) {
+    (
+      plane,
+      index
+    ) => {
 
-    groupEnergy[i] =
-      sums[i] /
-      maxEnergy;
+      plane.rotation.z =
 
-  }
+        elapsed *
+        (
+          0.06 +
+          index *
+          0.01
+        ) +
 
-  return groupEnergy;
+        index *
+        1.05;
+
+
+      plane.material.opacity =
+
+        0.04 +
+
+        beatPulse *
+        (
+          0.12 +
+          R *
+          0.15
+        );
+
+    }
+
+  );
+
+
+  // ==========================================================
+  // ONDAS
+  // ==========================================================
+
+  discoBands.forEach(
+
+    (
+      band,
+      index
+    ) => {
+
+      const wave =
+
+        Math.max(
+
+          0,
+
+          Math.sin(
+
+            beatPosition *
+            Math.PI *
+            2 -
+
+            index *
+            0.8
+
+          )
+
+        );
+
+
+      band.scale.setScalar(
+
+        band.userData.baseScale +
+
+        wave *
+        (
+          0.12 +
+          R *
+          0.26
+        )
+
+      );
+
+
+      band.material.opacity =
+
+        wave *
+        (
+          0.045 +
+          R *
+          0.08
+        );
+
+    }
+
+  );
+
+
+  // ==========================================================
+  // BLOOM
+  // ==========================================================
+
+  bloomPass.strength.value =
+
+    0.025 +
+
+    R *
+    0.09 +
+
+    beatPulse *
+    0.08;
+
+}
+
+
+// ============================================================
+// IMPACT RING
+// ============================================================
+
+function createImpactRing(
+
+  scene,
+
+  x,
+
+  z,
+
+  type,
+
+  strength
+
+) {
+
+  const geometry =
+    new THREE.RingGeometry(
+
+      0.08,
+
+      0.13,
+
+      32
+
+    );
+
+
+  const material =
+    new THREE.MeshBasicMaterial({
+
+      color:
+        raveColors[type],
+
+      transparent:
+        true,
+
+      opacity:
+        0.32 +
+        strength *
+        0.30,
+
+      side:
+        THREE.DoubleSide,
+
+      depthWrite:
+        false
+
+    });
+
+
+  const ring =
+    new THREE.Mesh(
+
+      geometry,
+
+      material
+
+    );
+
+
+  ring.rotation.x =
+    -Math.PI / 2;
+
+
+  ring.position.set(
+
+    x,
+
+    0.035,
+
+    z
+
+  );
+
+
+  ring.userData.life =
+    1;
+
+
+  ring.userData.strength =
+    strength;
+
+
+  scene.add(
+    ring
+  );
+
+
+  impactRings.push(
+    ring
+  );
 
 }
 
@@ -1474,58 +2368,143 @@ function createHUD() {
       'div'
     );
 
-  hud.style.cssText = `
 
-    position: fixed;
-    top: 16px;
-    left: 18px;
+  hud.id =
+    'hud';
 
-    z-index: 100;
-
-    pointer-events: none;
-
-    color: rgba(255,255,255,.78);
-
-    font-family: monospace;
-
-    font-size: 11px;
-
-    line-height: 1.55;
-
-    letter-spacing: 1px;
-
-    text-shadow:
-      0 0 8px rgba(114,255,0,.35);
-
-  `;
 
   hud.innerHTML = `
 
     <div id="state">
-      CHAOS
+      ⚡ DESORDEN
     </div>
 
     <div id="tempo">
-      ${BASE_BPM} BPM
+      ♫ ${BASE_BPM} BPM
     </div>
 
     <div id="r">
-      R 0.00
+      R: 0.00
     </div>
 
     <div id="k">
-      K 0.00
+      K: 0.00
     </div>
 
     <div id="omega">
-      Ω 1.00
+      Ω: 1.00
+    </div>
+
+    <div id="mode">
+      🎵 MODE 1
+    </div>
+
+    <div id="cameraIntensityControl" style="display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 8px; background: rgba(0, 0, 0, 0.3); border-radius: 4px;">
+      <label style="font-size: 11px; white-space: nowrap;">📷 CAMERA:</label>
+      <input 
+        type="range" 
+        id="cameraIntensitySlider" 
+        min="0" 
+        max="200" 
+        value="100" 
+        style="width: 80px; cursor: pointer; accent-color: #7CFF00;"
+      />
+      <span id="cameraIntensityValue" style="font-size: 11px; min-width: 30px;">100%</span>
     </div>
 
   `;
 
+
+  // ============================================================
+  // CANVAS OVERLAY - ONDAS VISUALES
+  // ============================================================
+
+  const waveCanvas =
+    document.createElement(
+      'canvas'
+    );
+
+  waveCanvas.style.position =
+    'fixed';
+
+  waveCanvas.style.top =
+    '0';
+
+  waveCanvas.style.left =
+    '0';
+
+  waveCanvas.style.pointerEvents =
+    'none';
+
+  waveCanvas.style.zIndex =
+    '100';
+
+  waveCanvas.style.opacity =
+    '0.6';
+
+  document.body.append(
+    waveCanvas
+  );
+
+  const waveCtx =
+    waveCanvas.getContext(
+      '2d'
+    );
+
+  function resizeWaveCanvas() {
+
+    waveCanvas.width =
+      window.innerWidth;
+
+    waveCanvas.height =
+      window.innerHeight;
+
+  }
+
+  resizeWaveCanvas();
+
+  window.addEventListener(
+    'resize',
+    resizeWaveCanvas
+  );
+
+
   document.body.append(
     hud
   );
+
+
+  // ============================================================
+  // EVENT LISTENERS - CAMERA INTENSITY
+  // ============================================================
+
+  const cameraSlider =
+    hud.querySelector(
+      '#cameraIntensitySlider'
+    );
+
+  const cameraValueDisplay =
+    hud.querySelector(
+      '#cameraIntensityValue'
+    );
+
+  cameraSlider.addEventListener(
+    'input',
+    (e) => {
+
+      cameraIntensity =
+        parseFloat(e.target.value) /
+        100.0;
+
+      cameraValueDisplay.textContent =
+        Math.round(
+          e.target.value
+        ) +
+        '%';
+
+    }
+  );
+
 
   return {
 
@@ -1552,218 +2531,14 @@ function createHUD() {
     omega:
       hud.querySelector(
         '#omega'
+      ),
+
+    mode:
+      hud.querySelector(
+        '#mode'
       )
 
   };
-
-}
-
-
-// ============================================================
-// VISUAL BEAT
-// ============================================================
-//
-// Esta capa NO modifica el sonido.
-// Simplemente usa el mismo reloj de 138 BPM.
-//
-// 1 beat:
-// oscuro → flash → caída
-//
-// De esta forma la escena se siente como una discoteca.
-//
-
-function updateDiscoVisual(
-  R
-) {
-
-  if (
-    !musicStarted ||
-    !audioCtx
-  ) {
-
-    discoPulse *= 0.88;
-    discoBlackout *= 0.82;
-    discoFlash *= 0.82;
-
-    return;
-
-  }
-
-  const elapsed =
-    audioCtx.currentTime -
-    musicStartTime;
-
-  const beatIndex =
-    Math.floor(
-      elapsed /
-      BEAT_SECONDS
-    );
-
-  const eighthIndex =
-    Math.floor(
-      elapsed /
-      EIGHTH_SECONDS
-    );
-
-
-  // ==========================================================
-  // BEAT
-  // ==========================================================
-
-  if (
-    beatIndex >
-    lastVisualBeat
-  ) {
-
-    lastVisualBeat =
-      beatIndex;
-
-    const beatInBar =
-      beatIndex %
-      4;
-
-    discoPulse =
-      1;
-
-    discoBlackout =
-      1;
-
-    discoFlash =
-      1;
-
-
-    // --------------------------------------------------------
-    // patrón visual por beat
-    // --------------------------------------------------------
-
-    if (
-      beatInBar === 0
-    ) {
-
-      whiteFlash.intensity =
-        Math.max(
-          whiteFlash.intensity,
-          2600 +
-          R *
-          2200
-        );
-
-      strobeLights.forEach(
-        light => {
-
-          light.color.set(
-            '#FFFFFF'
-          );
-
-          light.intensity =
-            1800 +
-            R *
-            2200;
-
-        }
-      );
-
-    } else {
-
-      const visualType =
-        beatInBar === 1
-          ? 0
-          : beatInBar === 2
-            ? 2
-            : 5;
-
-      const color =
-        colorObjects[
-          visualType
-        ];
-
-      strobeLights.forEach(
-        (
-          light,
-          index
-        ) => {
-
-          const active =
-            index === visualType ||
-            (
-              index %
-              2 ===
-              beatInBar %
-              2
-            );
-
-          light.color.copy(
-            color
-          );
-
-          light.intensity =
-            active
-              ? 1600 +
-                R *
-                1700
-              : 250;
-
-        }
-      );
-
-    }
-
-  }
-
-
-  // ==========================================================
-  // EIGHTHS
-  // ==========================================================
-
-  if (
-    eighthIndex >
-    lastVisualEighth
-  ) {
-
-    lastVisualEighth =
-      eighthIndex;
-
-    const subdivision =
-      eighthIndex %
-      8;
-
-
-    if (
-      subdivision % 2 === 1
-    ) {
-
-      discoFlash =
-        Math.max(
-          discoFlash,
-          0.48
-        );
-
-    }
-
-  }
-
-
-  // ==========================================================
-  // DECAY
-  // ==========================================================
-
-  discoPulse *=
-    Math.pow(
-      0.00008,
-      1 / 60
-    );
-
-  discoBlackout *=
-    Math.pow(
-      0.000003,
-      1 / 60
-    );
-
-  discoFlash *=
-    Math.pow(
-      0.00025,
-      1 / 60
-    );
 
 }
 
@@ -1774,10 +2549,9 @@ function updateDiscoVisual(
 
 async function main() {
 
-  const mount =
-    document.querySelector(
-      '#app'
-    );
+  // ==========================================================
+  // WEBGPU
+  // ==========================================================
 
   if (
     !WebGPU.isAvailable()
@@ -1791,19 +2565,43 @@ async function main() {
 
 
   // ==========================================================
+  // APP
+  // ==========================================================
+
+  const mount =
+    document.querySelector(
+      '#app'
+    );
+
+
+  if (!mount) {
+
+    throw new Error(
+      'No existe #app.'
+    );
+
+  }
+
+
+  // ==========================================================
   // SCENE
   // ==========================================================
 
   const scene =
     new THREE.Scene();
 
+
   scene.background =
     backgroundColor;
 
+
   scene.fog =
     new THREE.FogExp2(
-      '#000001',
-      0.028
+
+      '#030305',
+
+      0.030
+
     );
 
 
@@ -1813,38 +2611,58 @@ async function main() {
 
   const floorGeometry =
     new THREE.PlaneGeometry(
-      52,
-      52
+
+      48,
+
+      34
+
     );
 
-  const floorMaterial =
+
+  floorMaterial =
     new THREE.MeshStandardMaterial({
 
       color:
-        '#010202',
-
-      roughness:
-        0.19,
+        '#050608',
 
       metalness:
-        0.97
+        0.95,
+
+      roughness:
+        0.22,
+
+      transparent:
+        true,
+
+      opacity:
+        0
 
     });
 
+
   floorMaterial.emissive =
-    floorGlowColor;
+    new THREE.Color(
+      '#111A12'
+    );
+
 
   floorMaterial.emissiveIntensity =
-    0.005;
+    0.01;
+
 
   const floor =
     new THREE.Mesh(
+
       floorGeometry,
+
       floorMaterial
+
     );
+
 
   floor.rotation.x =
     -Math.PI / 2;
+
 
   scene.add(
     floor
@@ -1852,63 +2670,107 @@ async function main() {
 
 
   // ==========================================================
-  // COLORED STROBES
+  // DANCE FLOOR — TILES DE AJEDREZ
   // ==========================================================
 
-  raveColors.forEach(
-    color => {
-
-      const light =
-        new THREE.PointLight(
-          color,
-          0,
-          28,
-          2
-        );
-
-      light.position.set(
-        0,
-        3,
-        0
-      );
-
-      scene.add(
-        light
-      );
-
-      strobeLights.push(
-        light
-      );
-
-    }
-  );
-
-
-  // ==========================================================
-  // WHITE FLASH
-  // ==========================================================
-
-  whiteFlash =
-    new THREE.PointLight(
-      '#FFFFFF',
-      0,
-      40,
-      2
+  const danceFloor =
+    createDanceFloor(
+      scene
     );
 
-  whiteFlash.position.set(
-    0,
-    5,
-    0
-  );
 
-  scene.add(
-    whiteFlash
+  // ==========================================================
+  // DISCO
+  // ==========================================================
+
+  createDiscoVisuals(
+    scene
   );
 
 
   // ==========================================================
-  // CEILING
+  // AMBIENT
+  // ==========================================================
+
+  ambient =
+    new THREE.AmbientLight(
+
+      '#7CFF00',
+
+      0.15
+
+    );
+
+
+  scene.add(
+    ambient
+  );
+
+
+  // ==========================================================
+  // CLUB LIGHTS
+  // ==========================================================
+
+  const clubLightColors = [
+
+    '#00FF00',
+    '#FF1493',
+    '#00FFFF',
+    '#7CFF00'
+
+  ];
+
+
+  for (
+    let i = 0;
+    i < 8;
+    i++
+  ) {
+
+    const light =
+      new THREE.PointLight(
+
+        clubLightColors[
+          i % clubLightColors.length
+        ],
+
+        200,
+
+        50,
+
+        2
+
+      );
+
+
+    const angle =
+      (Math.PI * 2 / 8) * i;
+
+    light.position.set(
+
+      Math.cos(angle) * 12,
+
+      3 + Math.sin(i * 0.5) * 2,
+
+      Math.sin(angle) * 12
+
+    );
+
+
+    scene.add(
+      light
+    );
+
+
+    clubLights.push(
+      light
+    );
+
+  }
+
+
+  // ==========================================================
+  // TECHO
   // ==========================================================
 
   for (
@@ -1917,72 +2779,76 @@ async function main() {
     i++
   ) {
 
-    const x =
-      -12 +
-      (
-        i % 4
-      ) *
-      8;
-
-    const z =
-      -8 +
-      Math.floor(
-        i / 4
-      ) *
-      16;
-
     const light =
       new THREE.SpotLight(
-        i % 2 === 0
-          ? '#72FF00'
-          : '#8A00FF',
-        0,
-        42,
-        Math.PI / 8,
-        0.42,
-        1.2
+
+        i %
+        2 ===
+        0
+
+          ? '#7CFF00'
+
+          : '#FF1493',
+
+        110,
+
+        38,
+
+        Math.PI / 7,
+
+        0.65,
+
+        1
+
       );
 
+
     light.position.set(
-      x,
-      10,
-      z
+
+      (
+        i %
+        4 -
+        1.5
+      ) *
+      7,
+
+      9,
+
+      Math.floor(
+        i / 4
+      ) === 0
+        ? -7
+        : 7
+
     );
 
+
     light.target.position.set(
+
       0,
+
       0,
+
       0
+
     );
+
 
     scene.add(
       light
     );
+
 
     scene.add(
       light.target
     );
 
-    ceilingLights.push(
+
+    overheadLights.push(
       light
     );
 
   }
-
-
-  // ==========================================================
-  // AMBIENT
-  // ==========================================================
-
-  const ambient =
-    new THREE.AmbientLight(
-      '#D8FFE8',
-      0.18
-    );
-
-  scene.add(
-    ambient
-  );
 
 
   // ==========================================================
@@ -1991,17 +2857,27 @@ async function main() {
 
   const camera =
     new THREE.PerspectiveCamera(
-      48,
+
+      52,
+
       innerWidth /
       innerHeight,
+
       0.1,
-      140
+
+      120
+
     );
 
+
   camera.position.set(
+
     0,
-    6.5,
-    16
+
+    7.6,
+
+    17
+
   );
 
 
@@ -2011,25 +2887,36 @@ async function main() {
 
   const renderer =
     new THREE.WebGPURenderer({
+
       antialias:
         true
+
     });
 
+
   renderer.setPixelRatio(
+
     Math.min(
       devicePixelRatio,
       2
     )
+
   );
 
+
   renderer.setSize(
+
     innerWidth,
+
     innerHeight
+
   );
+
 
   mount.appendChild(
     renderer.domElement
   );
+
 
   await renderer.init();
 
@@ -2043,24 +2930,33 @@ async function main() {
       renderer
     );
 
+
   const scenePass =
     pass(
       scene,
       camera
     );
 
+
   const sceneColor =
     scenePass.getTextureNode(
       'output'
     );
 
-  const bloomPass =
+
+  bloomPass =
     bloom(
+
       sceneColor,
-      0.04,
-      0.10,
-      0.94
+
+      0.08,
+
+      0.35,
+
+      0.98
+
     );
+
 
   renderPipeline.outputNode =
     sceneColor.add(
@@ -2072,22 +2968,32 @@ async function main() {
   // ORBIT
   // ==========================================================
 
-  const orbit =
+  const controls =
     new OrbitControls(
+
       camera,
+
       renderer.domElement
+
     );
 
-  orbit.target.set(
+
+  controls.target.set(
+
     0,
-    0.9,
+
+    0.8,
+
     0
+
   );
 
-  orbit.enableDamping =
+
+  controls.enableDamping =
     true;
 
-  orbit.dampingFactor =
+
+  controls.dampingFactor =
     0.06;
 
 
@@ -2099,11 +3005,15 @@ async function main() {
     createParameters();
 
 
+  // ==========================================================
+  // SIMULATION
+  // ==========================================================
+
   const simulation =
     await createSimulation({
 
-      renderer,
       scene,
+
       count:
         NUM_AGENTS
 
@@ -2119,25 +3029,32 @@ async function main() {
 
 
   // ==========================================================
-  // SELECTION
+  // RAYCAST
   // ==========================================================
 
   const raycaster =
     new THREE.Raycaster();
 
+
   const pointer =
     new THREE.Vector2();
 
+
   let selectedIndex =
     -1;
+
 
   const selectionRing =
     new THREE.Mesh(
 
       new THREE.RingGeometry(
-        0.44,
-        0.52,
-        36
+
+        0.48,
+
+        0.54,
+
+        32
+
       ),
 
       new THREE.MeshBasicMaterial({
@@ -2149,20 +3066,26 @@ async function main() {
           true,
 
         opacity:
-          0.78,
+          0.75,
 
         side:
-          THREE.DoubleSide
+          THREE.DoubleSide,
+
+        depthWrite:
+          false
 
       })
 
     );
 
+
   selectionRing.rotation.x =
     -Math.PI / 2;
 
+
   selectionRing.visible =
     false;
+
 
   scene.add(
     selectionRing
@@ -2170,85 +3093,7 @@ async function main() {
 
 
   // ==========================================================
-  // IMPACT RINGS
-  // ==========================================================
-
-  const impactRings = [];
-
-
-  function createImpactRing(
-    x,
-    z,
-    type,
-    strength,
-    collective
-  ) {
-
-    const color =
-      collective > 0.55
-        ? '#FFFFFF'
-        : raveColors[type];
-
-    const geometry =
-      new THREE.RingGeometry(
-        0.05,
-        0.11,
-        32
-      );
-
-    const material =
-      new THREE.MeshBasicMaterial({
-
-        color,
-
-        transparent:
-          true,
-
-        opacity:
-          0.58,
-
-        side:
-          THREE.DoubleSide
-
-      });
-
-    const ring =
-      new THREE.Mesh(
-        geometry,
-        material
-      );
-
-    ring.rotation.x =
-      -Math.PI / 2;
-
-    ring.position.set(
-      x,
-      0.025,
-      z
-    );
-
-    ring.userData.life =
-      1;
-
-    ring.userData.collective =
-      collective;
-
-    ring.userData.strength =
-      strength;
-
-    scene.add(
-      ring
-    );
-
-    impactRings.push(
-      ring
-    );
-
-  }
-
-
-  // ==========================================================
-  // DROP
+  // GLOBAL DROP
   // ==========================================================
 
   function triggerDrop() {
@@ -2256,23 +3101,6 @@ async function main() {
     params.dropActive.value =
       1;
 
-    flashPulse =
-      1;
-
-    floorPulse =
-      1;
-
-    cameraShake =
-      0.22;
-
-    discoPulse =
-      1;
-
-    discoBlackout =
-      1;
-
-    discoFlash =
-      1;
 
     for (
       let i = 0;
@@ -2281,101 +3109,132 @@ async function main() {
     ) {
 
       phases[i] +=
+
         (
           Math.random() -
           0.5
         ) *
+
         Math.PI *
         2;
 
     }
 
-    whiteFlash.intensity =
-      3800;
 
-    strobeLights.forEach(
-      light => {
+    floorPulse =
+      1;
 
-        light.color.set(
-          '#FFFFFF'
-        );
 
-        light.intensity =
-          1700;
+    cameraShake =
+      0.10;
 
-      }
-    );
-
-    ceilingLights.forEach(
-      light => {
-
-        light.color.set(
-          '#FFFFFF'
-        );
-
-        light.intensity =
-          2700;
-
-      }
-    );
-
-    if (
-      audioCtx
-    ) {
-
-      playBuildNoise(
-        1
-      );
-
-    }
 
     setTimeout(
+
       () => {
 
         params.dropActive.value =
           0;
 
       },
-      300
+
+      280
+
     );
 
   }
 
 
   // ==========================================================
-  // PANEL
+  // UI
   // ==========================================================
 
   createLabPanel({
+
     params,
+
+    omegaSpread,
+
+    jumpAmount,
+
+
+    onKChange:
+      value => {
+
+        params.couplingK.value =
+          value;
+
+      },
+
+
+    onOmegaChange:
+      value => {
+
+        omegaSpread =
+          value;
+
+        updateNaturalFrequencies();
+
+      },
+
+
+    onJumpChange:
+      value => {
+
+        jumpAmount =
+          value;
+
+      },
+
+
     onDrop:
-      triggerDrop
+      triggerDrop,
+
+
+    onModeChange:
+      mode => {
+
+        visualMode =
+          mode;
+
+        simulation.setVisualMode(
+          mode
+        );
+
+      }
+
   });
 
 
   // ==========================================================
-  // AUDIO START
+  // INICIO DEL AUDIO
   // ==========================================================
 
   addEventListener(
+
     'pointerdown',
+
     () => {
 
       startMusic();
 
     }
+
   );
 
 
   // ==========================================================
-  // INDIVIDUAL PERTURBATION
+  // CLICK INDIVIDUAL
   // ==========================================================
 
-  addEventListener(
+  renderer.domElement.addEventListener(
+
     'pointerdown',
+
     event => {
 
       pointer.x =
+
         (
           event.clientX /
           innerWidth
@@ -2383,7 +3242,9 @@ async function main() {
         2 -
         1;
 
+
       pointer.y =
+
         -(
           event.clientY /
           innerHeight
@@ -2391,103 +3252,83 @@ async function main() {
         2 +
         1;
 
+
       raycaster.setFromCamera(
+
         pointer,
+
         camera
+
       );
 
-      const objects = [];
-
-      simulation.ravers.forEach(
-        raver => {
-
-          if (
-            !raver.visible
-          ) {
-
-            return;
-
-          }
-
-          raver.traverse(
-            child => {
-
-              if (
-                child.isMesh
-              ) {
-
-                objects.push(
-                  child
-                );
-
-              }
-
-            }
-          );
-
-        }
-      );
 
       const hits =
+
         raycaster.intersectObjects(
-          objects,
+
+          simulation.selectableMeshes,
+
           false
+
         );
 
+
       if (
-        hits.length === 0
+        !hits.length
       ) {
 
         return;
 
       }
 
-      let object =
-        hits[0].object;
 
-      while (
-        object &&
-        object.userData.index ===
+      const index =
+
+        hits[0]
+          .object
+          .userData
+          .index;
+
+
+      if (
+        index ===
         undefined
       ) {
 
-        object =
-          object.parent;
-
-      }
-
-      if (!object) {
         return;
+
       }
+
 
       selectedIndex =
-        object.userData.index;
+        index;
+
+
+      // ======================================================
+      // PERTURBACIÓN INDIVIDUAL
+      // ======================================================
+
+      phases[index] +=
+
+        Math.PI *
+        1.5;
+
 
       selectionRing.visible =
         true;
 
-      phases[
-        selectedIndex
-      ] +=
-        Math.PI *
-        1.5;
-
-      flashPulse =
-        Math.max(
-          flashPulse,
-          0.45
-        );
-
-      floorPulse =
-        Math.max(
-          floorPulse,
-          0.35
-        );
 
       cameraShake =
-        0.10;
+        Math.max(
+
+          cameraShake,
+
+          0.035
+
+        );
 
     }
+
   );
 
 
@@ -2496,79 +3337,148 @@ async function main() {
   // ==========================================================
 
   addEventListener(
+
     'keydown',
+
     event => {
 
+      // ======================================================
+      // K
+      // ======================================================
+
       if (
-        event.key ===
-        '['
+        event.key === '['
       ) {
 
         params.couplingK.value =
+
           Math.max(
+
             0,
+
             params.couplingK.value -
-            0.05
+            0.1
+
           );
 
       }
 
+
       if (
-        event.key ===
-        ']'
+        event.key === ']'
       ) {
 
         params.couplingK.value =
+
           Math.min(
+
             30,
+
             params.couplingK.value +
-            0.05
+            0.1
+
           );
 
       }
 
+
+      // ======================================================
+      // OMEGA
+      // ======================================================
+
       if (
-        event.key ===
-        '-'
+        event.key === '-'
       ) {
 
         omegaSpread =
+
           Math.max(
+
             0,
+
             omegaSpread -
             0.05
+
           );
+
 
         updateNaturalFrequencies();
 
       }
 
+
       if (
-        event.key ===
-        '='
+        event.key === '='
       ) {
 
         omegaSpread =
+
           Math.min(
+
             2,
+
             omegaSpread +
             0.05
+
           );
+
 
         updateNaturalFrequencies();
 
       }
+
+
+      // ======================================================
+      // GLOBAL DROP
+      // ======================================================
 
       if (
         event.code ===
         'Space'
       ) {
 
+        event.preventDefault();
+
         triggerDrop();
 
       }
 
+
+      // ======================================================
+      // VISTAS
+      // ======================================================
+
+      if (
+        event.key ===
+        '1'
+      ) {
+
+        visualMode =
+          1;
+
+        simulation.setVisualMode(
+          1
+        );
+
+      }
+
+
+      if (
+        event.key ===
+        '2'
+      ) {
+
+        visualMode =
+          2;
+
+        simulation.setVisualMode(
+          2
+        );
+
+      }
+
     }
+
   );
 
 
@@ -2579,21 +3489,24 @@ async function main() {
   const clock =
     new THREE.Clock();
 
-  simulation.reset();
-
 
   // ==========================================================
   // LOOP
   // ==========================================================
 
   renderer.setAnimationLoop(
+
     () => {
 
       const dt =
         Math.min(
+
           clock.getDelta(),
+
           0.04
+
         );
+
 
       const time =
         performance.now() *
@@ -2604,49 +3517,25 @@ async function main() {
       // DECAY
       // ======================================================
 
-      flashPulse *=
+      floorPulse *=
+
         Math.pow(
-          0.00002,
+
+          0.001,
+
           dt
+
         );
 
-      floorPulse *=
-        Math.pow(
-          0.001,
-          dt
-        );
 
       cameraShake *=
+
         Math.pow(
+
           0.002,
+
           dt
-        );
 
-
-      // ======================================================
-      // STROBES DECAY
-      // ======================================================
-
-      strobeLights.forEach(
-        light => {
-
-          light.intensity =
-            Math.max(
-              0,
-              light.intensity -
-              11000 *
-              dt
-            );
-
-        }
-      );
-
-      whiteFlash.intensity =
-        Math.max(
-          0,
-          whiteFlash.intensity -
-          19000 *
-          dt
         );
 
 
@@ -2659,14 +3548,18 @@ async function main() {
           NUM_AGENTS
         );
 
+
       const K =
         params.couplingK.value;
+
 
       let sumCos =
         0;
 
+
       let sumSin =
         0;
+
 
       for (
         let i = 0;
@@ -2677,6 +3570,7 @@ async function main() {
         let couplingSum =
           0;
 
+
         for (
           let j = 0;
           j < NUM_AGENTS;
@@ -2684,21 +3578,33 @@ async function main() {
         ) {
 
           if (
-            i !== j
+            i === j
           ) {
 
-            couplingSum +=
-              Math.sin(
-                phases[j] -
-                phases[i]
-              );
+            continue;
 
           }
 
+
+          couplingSum +=
+
+            Math.sin(
+
+              phases[j] -
+              phases[i]
+
+            );
+
         }
+
 
         let omega =
           freqs[i];
+
+
+        // ====================================================
+        // PERTURBACIÓN GLOBAL
+        // ====================================================
 
         if (
           params.dropActive.value >
@@ -2706,6 +3612,7 @@ async function main() {
         ) {
 
           omega +=
+
             (
               Math.random() -
               0.5
@@ -2714,28 +3621,43 @@ async function main() {
 
         }
 
+
+        // ====================================================
+        // KURAMOTO
+        // ====================================================
+
         const dTheta =
+
           omega +
+
           (
             K /
             NUM_AGENTS
           ) *
+
           couplingSum;
 
+
         newPhases[i] =
+
           phases[i] +
           dTheta *
           dt;
 
+
         phases[i] =
           newPhases[i];
 
+
         sumCos +=
+
           Math.cos(
             newPhases[i]
           );
 
+
         sumSin +=
+
           Math.sin(
             newPhases[i]
           );
@@ -2744,21 +3666,26 @@ async function main() {
 
 
       // ======================================================
-      // R
+      // ORDER PARAMETER
       // ======================================================
 
       const R =
+
         Math.sqrt(
+
           sumCos *
           sumCos +
+
           sumSin *
           sumSin
+
         ) /
+
         NUM_AGENTS;
 
 
       // ======================================================
-      // ESTADO
+      // ESTADOS DEL RETO
       // ======================================================
 
       if (
@@ -2766,19 +3693,19 @@ async function main() {
       ) {
 
         collectiveState =
-          'CHAOS';
+          'DESORDEN';
 
       } else if (
         R < 0.65
       ) {
 
         collectiveState =
-          'GROOVE';
+          'PARCIAL';
 
       } else {
 
         collectiveState =
-          'LOCK';
+          'ESTABLE';
 
       }
 
@@ -2790,18 +3717,35 @@ async function main() {
       hud.state.textContent =
         collectiveState;
 
+
+      hud.tempo.textContent =
+        `${BASE_BPM} BPM`;
+
+
       hud.r.textContent =
         `R ${R.toFixed(2)}`;
 
+
       hud.k.textContent =
         `K ${K.toFixed(2)}`;
+
 
       hud.omega.textContent =
         `Ω ${omegaSpread.toFixed(2)}`;
 
 
+      hud.mode.textContent =
+
+        visualMode ===
+        1
+
+          ? 'MODE 1 · CROWD'
+
+          : 'MODE 2 · GROUPS';
+
+
       // ======================================================
-      // SONG
+      // AUDIO
       // ======================================================
 
       updateMusic(
@@ -2810,678 +3754,149 @@ async function main() {
 
 
       // ======================================================
-      // DISCOTECA
-      // ======================================================
-
-      updateDiscoVisual(
-        R
-      );
-
-
-      // ======================================================
-      // BACKGROUND
-      // ======================================================
-
-      let hue;
-
-      if (
-        collectiveState ===
-        'CHAOS'
-      ) {
-
-        hue =
-          0.75;
-
-      } else if (
-        collectiveState ===
-        'GROOVE'
-      ) {
-
-        hue =
-          0.69;
-
-      } else {
-
-        hue =
-          0.32;
-
-      }
-
-      const discoLight =
-        discoFlash *
-        (
-          0.025 +
-          R *
-          0.035
-        );
-
-      const blackoutAmount =
-        THREE.MathUtils.clamp(
-          discoBlackout *
-          0.78,
-          0,
-          0.78
-        );
-
-      backgroundColor.setHSL(
-        hue,
-        0.96,
-        Math.max(
-          0.001,
-          (
-            0.003 +
-            R * 0.006 +
-            flashPulse * 0.025 +
-            discoLight
-          ) *
-          (
-            1 -
-            blackoutAmount
-          )
-        )
-      );
-
-
-      // ======================================================
-      // FLOOR
-      // ======================================================
-
-      floorGlowColor.setHSL(
-        collectiveState ===
-        'LOCK'
-          ? 0.31
-          : 0.38,
-        1,
-        0.11
-      );
-
-      floorMaterial.emissive =
-        floorGlowColor;
-
-      floorMaterial.emissiveIntensity =
-        Math.max(
-          0.0005,
-          (
-            0.003 +
-            R * 0.018 +
-            floorPulse * 1.20 +
-            discoFlash * 0.80
-          ) *
-          (
-            1 -
-            blackoutAmount
-          )
-        );
-
-
-      // ======================================================
-      // AMBIENT
-      // ======================================================
-
-      ambient.intensity =
-        Math.max(
-          0.012,
-          (
-            0.10 +
-            R * 0.04 +
-            flashPulse * 0.35 +
-            discoFlash * 0.12
-          ) *
-          (
-            1 -
-            discoBlackout *
-            0.92
-          )
-        );
-
-
-      // ======================================================
-      // BLOOM
-      // ======================================================
-
-      bloomPass.strength.value =
-        0.025 +
-        flashPulse * 0.16 +
-        discoFlash * 0.18;
-
-      bloomPass.radius.value =
-        0.11;
-
-      bloomPass.threshold.value =
-        0.90;
-
-
-      // ======================================================
-      // CEILING
-      // ======================================================
-
-      ceilingLights.forEach(
-        (
-          light,
-          i
-        ) => {
-
-          const p =
-            i *
-            0.73;
-
-          light.target.position.x =
-            Math.sin(
-              time *
-              0.65 +
-              p
-            ) *
-            15;
-
-          light.target.position.z =
-            Math.cos(
-              time *
-              0.48 +
-              p
-            ) *
-            10;
-
-          const baseIntensity =
-            flashPulse *
-            (
-              750 +
-              R *
-              400
-            );
-
-          const blackoutFactor =
-            1 -
-            discoBlackout *
-            0.95;
-
-          light.intensity =
-            Math.max(
-              0,
-              (
-                baseIntensity +
-                discoFlash *
-                (
-                  420 +
-                  R *
-                  700
-                )
-              ) *
-              blackoutFactor
-            );
-
-          if (
-            discoFlash >
-            0.60
-          ) {
-
-            light.color.set(
-              '#FFFFFF'
-            );
-
-          } else if (
-            flashPulse >
-            0.38
-          ) {
-
-            light.color.set(
-              '#FFFFFF'
-            );
-
-          } else if (
-            i % 2 ===
-            0
-          ) {
-
-            light.color.set(
-              '#72FF00'
-            );
-
-          } else {
-
-            light.color.set(
-              '#8A00FF'
-            );
-
-          }
-
-        }
-      );
-
-
-      // ======================================================
-      // SIMULATION
+      // SIMULACIÓN
       // ======================================================
 
       const impacts =
-        simulation.stepSimulation(
+
+        simulation.stepSimulation({
+
           phases,
-          freqs,
+
           dt,
-          R
-        );
 
+          jumpAmount
 
-      const groupEnergy =
-        getGroupEnergy(
-          impacts
-        );
+        });
 
 
       // ======================================================
-      // IMPACTOS
+      // ATERRIZAJES
       // ======================================================
 
-      let strongest =
-        0;
+      const groupEnergy = [0, 0, 0, 0, 0, 0];
 
-      let strongestEnergy =
-        0;
-
-      let strongestX =
-        0;
-
-      let strongestZ =
-        0;
-
+      for (const impact of impacts) {
+        groupEnergy[impact.type] = Math.max(
+          groupEnergy[impact.type],
+          impact.strength
+        );
+      }
 
       for (
         const impact
         of impacts
       ) {
 
-        const energy =
-          groupEnergy[
-            impact.type
-          ];
-
-        const visualStrength =
-          THREE.MathUtils.clamp(
-            impact.strength *
-            (
-              0.45 +
-              energy *
-              2.1
-            ),
-            0,
-            1.5
-          );
-
-
-        if (
-          visualStrength >
-          strongest
-        ) {
-
-          strongest =
-            visualStrength;
-
-          strongestEnergy =
-            energy;
-
-          strongestX =
-            impact.x;
-
-          strongestZ =
-            impact.z;
-
-        }
-
-
-        // ====================================================
-        // AGENTE
-        // ====================================================
-
-        const raver =
-          simulation.ravers[
-            impact.index
-          ];
-
-        const visualColor =
-          colorObjects[
-            impact.type
-          ];
-
-
-        raver.traverse(
-          object => {
-
-            if (
-              !object.isMesh
-            ) {
-
-              return;
-
-            }
-
-            if (
-              object.material &&
-              'emissiveIntensity'
-              in object.material
-            ) {
-
-              object.material.emissiveIntensity =
-                visualStrength > 0.7
-
-                  ? 4.0 +
-                    energy *
-                    4.0
-
-                  : 1.5 +
-                    energy *
-                    2.5;
-
-            }
-
-            if (
-              object.material &&
-              'color'
-              in object.material
-            ) {
-
-              object.material.color.copy(
-                visualColor
-              );
-
-            }
-
-          }
-        );
-
-
-        // ====================================================
-        // STROBE LOCAL
-        // ====================================================
-
-        const strobe =
-          strobeLights[
-            impact.type
-          ];
-
-        strobe.position.set(
-          impact.x,
-          3.5,
-          impact.z
-        );
-
-        if (
-          visualStrength >
-          0.65
-        ) {
-
-          strobe.color.set(
-            '#FFFFFF'
-          );
-
-        } else {
-
-          strobe.color.copy(
-            visualColor
-          );
-
-        }
-
-        strobe.intensity =
-          Math.max(
-            strobe.intensity,
-            1200 *
-            visualStrength
-          );
-
-
-        // ====================================================
-        // RING
-        // ====================================================
-
         createImpactRing(
+
+          scene,
+
           impact.x,
+
           impact.z,
+
           impact.type,
-          impact.strength,
-          energy
+
+          impact.strength
+
         );
 
-      }
 
+        const energy = groupEnergy[impact.type];
+        const visualStrength = THREE.MathUtils.clamp(
+          impact.strength * (0.45 + energy * 2.1),
+          0,
+          1.5
+        );
 
-      // ======================================================
-      // FLASH COLECTIVO
-      // ======================================================
-
-      if (
-        strongest >
-        0.60
-      ) {
-
-        flashPulse =
-          Math.max(
-            flashPulse,
-            strongest
-          );
+        if (impact.index !== undefined && simulation.ravers && simulation.ravers[impact.index]) {
+          const raver = simulation.ravers[impact.index];
+          raver.traverse(object => {
+            if (object.material && 'emissiveIntensity' in object.material) {
+              object.material.emissiveIntensity = visualStrength > 0.7
+                ? 4.0 + energy * 4.0
+                : 1.5 + energy * 2.5;
+            }
+          });
+        }
 
         floorPulse =
+
           Math.max(
+
             floorPulse,
-            strongest *
-            0.85
+
+            impact.strength *
+            0.55
+
           );
+
 
         cameraShake =
+
           Math.max(
+
             cameraShake,
-            strongest *
-            0.045
+
+            impact.strength *
+            0.020
+
           );
 
       }
 
 
       // ======================================================
-      // FLASH BLANCO
+      // CLUB
       // ======================================================
 
-      if (
-        strongestEnergy >
-        0.50
-      ) {
+      const musicElapsed =
 
-        whiteFlash.position.set(
-          strongestX,
-          4.5,
-          strongestZ
-        );
+        musicStarted &&
+        audioCtx
 
-        whiteFlash.intensity =
-          Math.max(
-            whiteFlash.intensity,
-            1800 +
-            strongestEnergy *
-            1500
-          );
+          ? audioCtx.currentTime -
+            musicStartTime
 
-      }
+          : time;
 
 
-      // ======================================================
-      // VISUAL BASE DE LOS AGENTES
-      // ======================================================
+      updateClubLighting(
 
-      simulation.ravers.forEach(
-        (
-          raver,
-          index
-        ) => {
+        musicElapsed,
 
-          const type =
-            raver.userData.type;
+        R
 
-          const phase =
-            phases[index];
-
-          let typePulse;
-
-          switch (
-            type
-          ) {
-
-            case 0:
-              typePulse =
-                Math.pow(
-                  Math.max(
-                    0,
-                    Math.sin(
-                      phase
-                    )
-                  ),
-                  8
-                );
-              break;
-
-            case 1:
-              typePulse =
-                0.35 +
-                0.20 *
-                Math.sin(
-                  phase *
-                  0.5
-                );
-              break;
-
-            case 2:
-              typePulse =
-                Math.pow(
-                  Math.max(
-                    0,
-                    Math.sin(
-                      phase
-                    )
-                  ),
-                  12
-                );
-              break;
-
-            case 3:
-              typePulse =
-                0.20 +
-                0.14 *
-                Math.sin(
-                  phase *
-                  2
-                );
-              break;
-
-            case 4:
-              typePulse =
-                0.35 +
-                0.24 *
-                Math.sin(
-                  phase *
-                  2
-                );
-              break;
-
-            default:
-              typePulse =
-                0.30 +
-                0.30 *
-                Math.abs(
-                  Math.sin(
-                    phase *
-                    0.5
-                  )
-                );
-
-          }
-
-
-          const collectiveGlow =
-            R *
-            0.45;
-
-          const darkness =
-            discoBlackout *
-            0.88;
-
-
-          raver.traverse(
-            object => {
-
-              if (
-                !object.isMesh
-              ) {
-
-                return;
-
-              }
-
-              if (
-                object.material &&
-                'emissiveIntensity'
-                in object.material
-              ) {
-
-                const target =
-                  Math.max(
-                    0.008,
-
-                    (
-                      0.03 +
-                      typePulse *
-                      0.42 +
-                      collectiveGlow +
-                      discoFlash *
-                      1.2 +
-                      flashPulse *
-                      1.8
-                    ) *
-                    (
-                      1 -
-                      darkness
-                    )
-                  );
-
-                object.material.emissiveIntensity =
-                  THREE.MathUtils.lerp(
-                    object.material.emissiveIntensity,
-                    target,
-                    Math.min(
-                      1,
-                      dt *
-                      16
-                    )
-                  );
-
-              }
-
-              if (
-                object.material &&
-                'color'
-                in object.material
-              ) {
-
-                object.material.color.copy(
-                  colorObjects[
-                    type
-                  ]
-                );
-
-              }
-
-            }
-
-          );
-
-        }
       );
 
 
       // ======================================================
-      // RINGS
+      // DANCE FLOOR
+      // ======================================================
+
+      danceFloor.update({
+
+        elapsed:
+          musicElapsed,
+
+        beatSeconds:
+          BEAT_SECONDS,
+
+        R,
+
+        floorPulse
+
+      });
+
+
+      // ======================================================
+      // IMPACT RINGS
       // ======================================================
 
       for (
         let i =
-          impactRings.length -
-          1;
+          impactRings.length - 1;
 
         i >= 0;
 
@@ -3491,47 +3906,57 @@ async function main() {
         const ring =
           impactRings[i];
 
+
         ring.userData.life -=
+
           dt *
-          (
-            3.2 +
-            ring.userData.collective
-          );
+          3.0;
+
 
         const life =
           ring.userData.life;
 
-        const collective =
-          ring.userData.collective;
 
-        const expansion =
+        const strength =
+          ring.userData.strength;
+
+
+        const scale =
+
           1 +
+
           (
             1 -
             life
           ) *
+
           (
-            4 +
-            collective *
-            14
+            3 +
+            strength *
+            5
           );
 
-        ring.scale.set(
-          expansion,
-          expansion,
-          expansion
+
+        ring.scale.setScalar(
+          scale
         );
 
+
         ring.material.opacity =
+
           Math.max(
+
             0,
+
             life *
             (
-              0.12 +
-              collective *
-              0.50
+              0.16 +
+              strength *
+              0.42
             )
+
           );
+
 
         if (
           life <=
@@ -3542,8 +3967,11 @@ async function main() {
             ring
           );
 
+
           ring.geometry.dispose();
+
           ring.material.dispose();
+
 
           impactRings.splice(
             i,
@@ -3556,7 +3984,7 @@ async function main() {
 
 
       // ======================================================
-      // SELECTION
+      // SELECCIÓN
       // ======================================================
 
       if (
@@ -3569,70 +3997,153 @@ async function main() {
             selectedIndex
           ];
 
-        selectionRing.position.set(
-          selected.position.x,
-          0.03,
-          selected.position.z
-        );
 
-        selectionRing.scale.setScalar(
-          1 +
-          Math.sin(
-            time *
-            8
-          ) *
-          0.10
-        );
+        if (
+          selected
+        ) {
 
-        selectionRing.rotation.z +=
-          dt *
-          4;
+          const object =
+            selected.object;
+
+
+          selectionRing.position.set(
+
+            object.position.x,
+
+            0.035,
+
+            object.position.z
+
+          );
+
+
+          selectionRing.scale.setScalar(
+
+            1 +
+
+            Math.sin(
+
+              time *
+              8
+
+            ) *
+
+            0.08
+
+          );
+
+
+          selectionRing.rotation.z +=
+
+            dt *
+            3;
+
+        }
 
       }
 
 
       // ======================================================
-      // CAMERA
+      // CÁMARA - PUM PUM AL RITMO DEL BPM
       // ======================================================
 
-      camera.position.x =
+      // Oscilación vertical INTENSA al beat
+      const beatPhaseForCamera =
+        (time / BEAT_SECONDS) *
+        Math.PI *
+        2;
+
+      const cameraHeightPulse =
         Math.sin(
-          time *
-          0.65
+          beatPhaseForCamera
         ) *
-        cameraShake;
+        1.2 *
+        cameraIntensity;
+
+      // Pum pum extra en el impacto
+      const pumpEffect =
+        Math.pow(
+          Math.max(
+            0,
+            Math.sin(
+              beatPhaseForCamera
+            )
+          ),
+          3
+        ) *
+        1.8 *
+        cameraIntensity;
+
+      // Oscilación horizontal MÁS activa
+      const cameraSwayPhase =
+        (time / BEAT_SECONDS) *
+        Math.PI *
+        2;
+
+      const cameraSway =
+        (
+          Math.sin(
+            cameraSwayPhase *
+            0.5
+          ) *
+          2.2 +
+          Math.sin(
+            cameraSwayPhase *
+            1.3
+          ) *
+          1.1
+        ) *
+        cameraIntensity;
+
+      // Oscilación frontal-posterior
+      const cameraDepthPulse =
+        Math.cos(
+          beatPhaseForCamera
+        ) *
+        0.9 *
+        cameraIntensity;
+
+      camera.position.x =
+
+        Math.sin(
+
+          time *
+          0.60
+
+        ) *
+
+        cameraShake +
+
+        cameraSway;
+
 
       camera.position.y =
-        6.5 +
+
+        7.6 +
+
         Math.cos(
+
           time *
-          0.50
+          0.48
+
         ) *
-        cameraShake;
+
+        cameraShake +
+
+        cameraHeightPulse +
+
+        pumpEffect;
+
 
       camera.position.z =
-        16 +
-        Math.sin(
-          time *
-          0.30
-        ) *
-        cameraShake;
+        17 +
+        cameraDepthPulse;
 
-      camera.fov =
-        THREE.MathUtils.lerp(
-          camera.fov,
-          48 +
-          flashPulse *
-          2.5 +
-          discoFlash *
-          1.4,
-          dt *
-          3
-        );
 
       camera.updateProjectionMatrix();
 
-      orbit.update();
+
+      controls.update();
 
 
       // ======================================================
@@ -3642,6 +4153,7 @@ async function main() {
       renderPipeline.render();
 
     }
+
   );
 
 
@@ -3650,21 +4162,29 @@ async function main() {
   // ==========================================================
 
   addEventListener(
+
     'resize',
+
     () => {
 
       camera.aspect =
         innerWidth /
         innerHeight;
 
+
       camera.updateProjectionMatrix();
 
+
       renderer.setSize(
+
         innerWidth,
+
         innerHeight
+
       );
 
     }
+
   );
 
 }
@@ -3675,48 +4195,56 @@ async function main() {
 // ============================================================
 
 main().catch(
+
   error => {
 
     console.error(
       error
     );
 
+
     const pre =
       document.createElement(
         'pre'
       );
 
+
     pre.style.cssText = `
 
       position: fixed;
 
-      inset: 16px;
+      inset: 12px;
 
-      color: white;
-
-      background: black;
+      z-index: 30000;
 
       padding: 20px;
 
-      z-index: 200;
+      background: #000;
+
+      color: #fff;
 
       overflow: auto;
 
-      white-space: pre-wrap;
-
       font-family: monospace;
+
+      white-space: pre-wrap;
 
     `;
 
+
     pre.textContent =
       String(
+
         error?.stack ||
         error
+
       );
+
 
     document.body.append(
       pre
     );
 
   }
+
 );

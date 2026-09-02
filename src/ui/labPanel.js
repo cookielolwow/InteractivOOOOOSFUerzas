@@ -1,47 +1,74 @@
-function rangeRow(
-  parent,
-  label,
-  object,
-  key,
-  min,
-  max,
-  step,
-  onInput
-) {
-
-  const wrap =
+function createSectionTitle(text) {
+  const title =
     document.createElement(
       'div'
     );
 
-  wrap.className =
-    'row';
+  title.className =
+    'ui-section-title';
 
-  const lab =
+  title.textContent =
+    text;
+
+  return title;
+}
+
+
+function createSlider({
+  label,
+  min,
+  max,
+  step,
+  value,
+  onInput
+}) {
+  const wrapper =
     document.createElement(
-      'label'
+      'div'
     );
 
-  const name =
+  wrapper.className =
+    'ui-slider-row';
+
+
+  const header =
+    document.createElement(
+      'div'
+    );
+
+  header.className =
+    'ui-slider-header';
+
+
+  const labelEl =
     document.createElement(
       'span'
     );
 
-  const value =
-    document.createElement(
-      'span'
-    );
+  labelEl.className =
+    'ui-slider-label';
 
-  value.className =
-    'value';
-
-  name.textContent =
+  labelEl.textContent =
     label;
 
-  lab.append(
-    name,
-    value
+
+  const valueEl =
+    document.createElement(
+      'span'
+    );
+
+  valueEl.className =
+    'ui-slider-value';
+
+  valueEl.textContent =
+    Number(value).toFixed(2);
+
+
+  header.append(
+    labelEl,
+    valueEl
   );
+
 
   const input =
     document.createElement(
@@ -50,6 +77,9 @@ function rangeRow(
 
   input.type =
     'range';
+
+  input.className =
+    'ui-slider';
 
   input.min =
     String(min);
@@ -61,182 +91,763 @@ function rangeRow(
     String(step);
 
   input.value =
-    String(
-      object[key]
-    );
-
-
-  const refresh =
-    () => {
-
-      object[key] =
-        Number(
-          input.value
-        );
-
-      value.textContent =
-        Number(
-          input.value
-        ).toFixed(2);
-
-      onInput?.(
-        object[key]
-      );
-
-    };
+    String(value);
 
 
   input.addEventListener(
     'input',
-    refresh
+    () => {
+      const numericValue =
+        Number(input.value);
+
+      valueEl.textContent =
+        numericValue.toFixed(
+          step >= 1
+            ? 0
+            : 2
+        );
+
+      onInput?.(
+        numericValue
+      );
+    }
   );
 
-  refresh();
 
-  wrap.append(
-    lab,
+  wrapper.append(
+    header,
     input
   );
 
-  parent.append(
-    wrap
-  );
 
   return {
+    wrapper,
     input,
-    refresh
+    valueEl
   };
-
 }
 
 
-function button(
-  parent,
-  label,
+function createButton(
+  text,
   onClick
 ) {
-
-  const b =
+  const button =
     document.createElement(
       'button'
     );
 
-  b.textContent =
-    label;
+  button.className =
+    'ui-button';
 
-  b.addEventListener(
+  button.type =
+    'button';
+
+  button.textContent =
+    text;
+
+
+  button.addEventListener(
+    'pointerdown',
+    (event) => {
+      event.stopPropagation();
+    }
+  );
+
+
+  button.addEventListener(
     'click',
-    onClick
+    (event) => {
+      event.stopPropagation();
+
+      onClick?.();
+    }
   );
 
-  parent.append(
-    b
-  );
 
-  return b;
-
+  return button;
 }
 
 
 export function createLabPanel({
   params,
-  onDrop
-}) {
 
+  omegaSpread = 1.0,
+
+  jumpAmount = 1.0,
+
+  onKChange,
+
+  onOmegaChange,
+
+  onJumpChange,
+
+  onDrop,
+
+  onModeChange
+}) {
   const panel =
     document.createElement(
       'aside'
     );
 
   panel.className =
-    'panel';
-
-  panel.innerHTML = `
-    <div class="brand">
-      DIRTY TECHNO 138 BPM
-    </div>
-
-    <p>
-      Kuramoto Self-Organization Rave
-    </p>
-  `;
+    'ui-panel';
 
 
-  const group =
+  // ========================================================
+  // HEADER
+  // ========================================================
+
+  const header =
     document.createElement(
       'div'
     );
 
-  group.className =
-    'group';
-
-  group.innerHTML =
-    '<h2>Kuramoto Control</h2>';
-
-  panel.append(
-    group
-  );
+  header.className =
+    'ui-panel-header';
 
 
-  const state = {
-
-    couplingK:
-      params.couplingK.value,
-
-    djIntervention:
-      params.djIntervention.value
-
-  };
-
-
-  rangeRow(
-    group,
-    'Acoplamiento (K)',
-    state,
-    'couplingK',
-    0,
-    30,
-    0.1,
-    value =>
-      params.couplingK.value =
-        value
-  );
-
-
-  rangeRow(
-    group,
-    'DJ Fader (Chaos)',
-    state,
-    'djIntervention',
-    0,
-    60,
-    1.0,
-    value =>
-      params.djIntervention.value =
-        value
-  );
-
-
-  const actions =
+  const title =
     document.createElement(
       'div'
     );
 
-  actions.className =
-    'group';
+  title.className =
+    'ui-panel-title';
 
-  actions.innerHTML =
-    '<h2>Acción Performativa</h2>';
+  title.textContent =
+    'KURAMOTO SYSTEM';
 
-  panel.append(
-    actions
+
+  const subtitle =
+    document.createElement(
+      'div'
+    );
+
+  subtitle.className =
+    'ui-panel-subtitle';
+
+  subtitle.textContent =
+    'AUDIOVISUAL PERFORMANCE';
+
+
+  header.append(
+    title,
+    subtitle
   );
 
 
-  button(
-    actions,
-    'EL DROP (Romper Ritmo)',
-    onDrop
+  // ========================================================
+  // SIMULACIÓN
+  // ========================================================
+
+  const simulationSection =
+    document.createElement(
+      'section'
+    );
+
+  simulationSection.className =
+    'ui-section';
+
+
+  simulationSection.append(
+    createSectionTitle(
+      'SIMULACIÓN'
+    )
+  );
+
+
+  const kSlider =
+    createSlider({
+      label:
+        'K — ACOPLAMIENTO',
+
+      min:
+        0,
+
+      max:
+        30,
+
+      step:
+        0.1,
+
+      value:
+        params?.couplingK?.value ??
+        2.0,
+
+      onInput:
+        (value) => {
+          if (
+            params?.couplingK
+          ) {
+            params.couplingK.value =
+              value;
+          }
+
+          onKChange?.(
+            value
+          );
+        }
+    });
+
+
+  const omegaSlider =
+    createSlider({
+      label:
+        'OMEGA — DISPERSIÓN',
+
+      min:
+        0,
+
+      max:
+        2,
+
+      step:
+        0.01,
+
+      value:
+        omegaSpread,
+
+      onInput:
+        (value) => {
+          onOmegaChange?.(
+            value
+          );
+        }
+    });
+
+
+  const jumpSlider =
+    createSlider({
+      label:
+        'ENERGÍA DE SALTO',
+
+      min:
+        0.2,
+
+      max:
+        1.8,
+
+      step:
+        0.01,
+
+      value:
+        jumpAmount,
+
+      onInput:
+        (value) => {
+          onJumpChange?.(
+            value
+          );
+        }
+    });
+
+
+  simulationSection.append(
+    kSlider.wrapper,
+    omegaSlider.wrapper,
+    jumpSlider.wrapper
+  );
+
+
+  // ========================================================
+  // MODO
+  // ========================================================
+
+  const modeSection =
+    document.createElement(
+      'section'
+    );
+
+  modeSection.className =
+    'ui-section';
+
+
+  modeSection.append(
+    createSectionTitle(
+      'MODO DE PISTA'
+    )
+  );
+
+
+  const modeDescription =
+    document.createElement(
+      'div'
+    );
+
+  modeDescription.className =
+    'ui-mode-description';
+
+  modeDescription.textContent =
+    '1 · PISTA ORGÁNICA / 2 · GRUPOS';
+
+
+  const modeButtons =
+    document.createElement(
+      'div'
+    );
+
+  modeButtons.className =
+    'ui-button-grid';
+
+
+  let mode1Button;
+
+  let mode2Button;
+
+
+  mode1Button =
+    createButton(
+      'MODO 1',
+      () => {
+        onModeChange?.(
+          1
+        );
+
+        mode1Button.classList.add(
+          'active'
+        );
+
+        mode2Button.classList.remove(
+          'active'
+        );
+      }
+    );
+
+
+  mode2Button =
+    createButton(
+      'MODO 2',
+      () => {
+        onModeChange?.(
+          2
+        );
+
+        mode2Button.classList.add(
+          'active'
+        );
+
+        mode1Button.classList.remove(
+          'active'
+        );
+      }
+    );
+
+
+  mode1Button.classList.add(
+    'active'
+  );
+
+
+  modeButtons.append(
+    mode1Button,
+    mode2Button
+  );
+
+
+  modeSection.append(
+    modeDescription,
+    modeButtons
+  );
+
+
+  // ========================================================
+  // PERTURBACIÓN
+  // ========================================================
+
+  const perturbSection =
+    document.createElement(
+      'section'
+    );
+
+  perturbSection.className =
+    'ui-section';
+
+
+  perturbSection.append(
+    createSectionTitle(
+      'PERTURBACIÓN'
+    )
+  );
+
+
+  const dropButton =
+    createButton(
+      'GLOBAL DROP',
+      () => {
+        onDrop?.();
+      }
+    );
+
+
+  dropButton.classList.add(
+    'ui-button-primary'
+  );
+
+
+  const dropDescription =
+    document.createElement(
+      'div'
+    );
+
+  dropDescription.className =
+    'ui-small-text';
+
+  dropDescription.textContent =
+    'Rompe temporalmente la sincronización global.';
+
+
+  perturbSection.append(
+    dropButton,
+    dropDescription
+  );
+
+
+  // ========================================================
+  // PERSONALIDADES
+  // ========================================================
+
+  const personalitySection =
+    document.createElement(
+      'section'
+    );
+
+  personalitySection.className =
+    'ui-section';
+
+
+  personalitySection.append(
+    createSectionTitle(
+      'PERSONALIDADES'
+    )
+  );
+
+
+  const personalities = [
+    {
+      name:
+        'KICK',
+
+      color:
+        '#FF3B30'
+    },
+
+    {
+      name:
+        'RUMBLE',
+
+      color:
+        '#8E44FF'
+    },
+
+    {
+      name:
+        'CLAP',
+
+      color:
+        '#FFFFFF'
+    },
+
+    {
+      name:
+        'CLOSED HAT',
+
+      color:
+        '#00D9FF'
+    },
+
+    {
+      name:
+        'OPEN HAT',
+
+      color:
+        '#FF2BA6'
+    },
+
+    {
+      name:
+        'ACID',
+
+      color:
+        '#7CFF00'
+    }
+  ];
+
+
+  const legend =
+    document.createElement(
+      'div'
+    );
+
+  legend.className =
+    'ui-legend';
+
+
+  for (
+    const personality
+    of personalities
+  ) {
+    const item =
+      document.createElement(
+        'div'
+      );
+
+    item.className =
+      'ui-legend-item';
+
+
+    const dot =
+      document.createElement(
+        'span'
+      );
+
+    dot.className =
+      'ui-legend-dot';
+
+    dot.style.backgroundColor =
+      personality.color;
+
+    dot.style.boxShadow =
+      `0 0 8px ${personality.color}`;
+
+
+    const name =
+      document.createElement(
+        'span'
+      );
+
+    name.className =
+      'ui-legend-name';
+
+    name.textContent =
+      personality.name;
+
+
+    item.append(
+      dot,
+      name
+    );
+
+
+    legend.append(
+      item
+    );
+  }
+
+
+  personalitySection.append(
+    legend
+  );
+
+
+  // ========================================================
+  // ESTADOS
+  // ========================================================
+
+  const stateSection =
+    document.createElement(
+      'section'
+    );
+
+  stateSection.className =
+    'ui-section';
+
+
+  stateSection.append(
+    createSectionTitle(
+      'ESTADOS DEL SISTEMA'
+    )
+  );
+
+
+  const states = [
+    {
+      name:
+        'DESORDEN',
+
+      description:
+        'R bajo · fases desfasadas'
+    },
+
+    {
+      name:
+        'PARCIAL',
+
+      description:
+        'R medio · coordinación emergente'
+    },
+
+    {
+      name:
+        'ESTABLE',
+
+      description:
+        'R alto · sincronización colectiva'
+    }
+  ];
+
+
+  const stateList =
+    document.createElement(
+      'div'
+    );
+
+  stateList.className =
+    'ui-state-list';
+
+
+  for (
+    const state
+    of states
+  ) {
+    const item =
+      document.createElement(
+        'div'
+      );
+
+    item.className =
+      'ui-state-item';
+
+
+    const stateName =
+      document.createElement(
+        'div'
+      );
+
+    stateName.className =
+      'ui-state-name';
+
+    stateName.textContent =
+      state.name;
+
+
+    const stateDescription =
+      document.createElement(
+        'div'
+      );
+
+    stateDescription.className =
+      'ui-state-description';
+
+    stateDescription.textContent =
+      state.description;
+
+
+    item.append(
+      stateName,
+      stateDescription
+    );
+
+
+    stateList.append(
+      item
+    );
+  }
+
+
+  stateSection.append(
+    stateList
+  );
+
+
+  // ========================================================
+  // CONTROLES
+  // ========================================================
+
+  const controlsSection =
+    document.createElement(
+      'section'
+    );
+
+  controlsSection.className =
+    'ui-section';
+
+
+  controlsSection.append(
+    createSectionTitle(
+      'CONTROLES'
+    )
+  );
+
+
+  const controls = [
+    '[ / ]   modificar K',
+
+    '- / =   modificar omega',
+
+    'SPACE   perturbación global',
+
+    'CLICK   perturbar agente',
+
+    '1 / 2   cambiar modo'
+  ];
+
+
+  const controlsList =
+    document.createElement(
+      'div'
+    );
+
+  controlsList.className =
+    'ui-controls-list';
+
+
+  for (
+    const text
+    of controls
+  ) {
+    const item =
+      document.createElement(
+        'div'
+      );
+
+    item.className =
+      'ui-control-item';
+
+    item.textContent =
+      text;
+
+    controlsList.append(
+      item
+    );
+  }
+
+
+  controlsSection.append(
+    controlsList
+  );
+
+
+  // ========================================================
+  // FOOTER
+  // ========================================================
+
+  const footer =
+    document.createElement(
+      'div'
+    );
+
+  footer.className =
+    'ui-panel-footer';
+
+  footer.textContent =
+    'KURAMOTO · SYNCHRONIZATION · LIVE SYSTEM';
+
+
+  // ========================================================
+  // ARMAR PANEL
+  // ========================================================
+
+  panel.append(
+    header,
+    simulationSection,
+    modeSection,
+    perturbSection,
+    personalitySection,
+    stateSection,
+    controlsSection,
+    footer
   );
 
 
@@ -246,13 +857,6 @@ export function createLabPanel({
 
 
   return {
-
-    element:
-      panel,
-
-    setVisible:
-      () => {}
-
+    refresh() {}
   };
-
 }
