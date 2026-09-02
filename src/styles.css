@@ -133,8 +133,7 @@ canvas {
 
   letter-spacing: 2px;
 
-  color:
-    #7cff00;
+  color: #7cff00;
 }
 
 
@@ -478,18 +477,16 @@ canvas {
   color: #FF1493;
 
   text-shadow: 0 0 15px #FF1493, 0 0 20px #7CFF00;
-}
 
-  color:
-    #7cff00;
-
-  border-color:
-    #7cff00;
+  border-color:  #7cff00;
 
   box-shadow:
     0 0 12px
     rgba(124, 255, 0, 0.18);
 }
+
+
+
 
 
 .ui-button-primary {
