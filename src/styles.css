@@ -408,14 +408,11 @@ transition:
 
 
 .ui-button.active {
-  background:
-    rgba(124, 255, 0, 0.16);
+  background:rgba(124, 255, 0, 0.16);
 
   color:#7cff00;
 
-  box-shadow:
-    0 0 16px
-    rgba(124, 255, 0, 0.5);
+  box-shadow: 0 0 16px rgba(124, 255, 0, 0.5);
 }
 
 
