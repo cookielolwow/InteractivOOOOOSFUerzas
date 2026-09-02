@@ -384,12 +384,12 @@ canvas {
   letter-spacing: 1px;
 
   cursor: pointer;
-
-  transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.1s ease;
+  
+transition:
+  background 0.15s ease,
+  color 0.15s ease,
+  box-shadow 0.15s ease,
+  transform 0.1s ease;
 }
 
 
@@ -475,16 +475,12 @@ canvas {
 
 #hud #mode {
   color: #FF1493;
-
   text-shadow: 0 0 15px #FF1493, 0 0 20px #7CFF00;
-
-  border-color:  #7cff00;
-
+  border-color:#7cff00;
   box-shadow:
     0 0 12px
     rgba(124, 255, 0, 0.18);
 }
-
 
 
 
@@ -495,11 +491,9 @@ canvas {
   color:
     #050607;
 
-  background:
-    #7cff00;
+  background:#7cff00;
 
-  border-color:
-    #7cff00;
+  border-color:#7cff00;
 
   font-weight: bold;
 }
