@@ -178,8 +178,7 @@ canvas {
 
   letter-spacing: 2px;
 
-  color:
-    #7cff00;
+  color:#7cff00;
 }
 
 
@@ -232,8 +231,7 @@ canvas {
 
   font-weight: bold;
 
-  color:
-    #7cff00;
+  color:#7cff00;
 }
 
 
@@ -291,8 +289,7 @@ canvas {
 
   border-radius: 0;
 
-  background:
-    #7cff00;
+  background:#7cff00;
 
   box-shadow:
     0 0 8px
@@ -333,8 +330,7 @@ canvas {
 
   border-radius: 0;
 
-  background:
-    #7cff00;
+  background:#7cff00;
 
   box-shadow:
     0 0 8px
@@ -384,7 +380,7 @@ canvas {
   letter-spacing: 1px;
 
   cursor: pointer;
-  
+
 transition:
   background 0.15s ease,
   color 0.15s ease,
@@ -397,8 +393,7 @@ transition:
   background:
     rgba(124, 255, 0, 0.1);
 
-  color:
-    #7cff00;
+  color:#7cff00;
 
   box-shadow:
     0 0 12px
@@ -416,8 +411,7 @@ transition:
   background:
     rgba(124, 255, 0, 0.16);
 
-  color:
-    #7cff00;
+  color:#7cff00;
 
   box-shadow:
     0 0 16px
@@ -606,7 +600,7 @@ transition:
   letter-spacing: 1.5px;
 
   color:
-    #7cff00;
+#7cff00;
 }
 
 
