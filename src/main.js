@@ -21,7 +21,8 @@ import {
 } from './simulation/parameters.js';
 
 import {
-  createSimulation
+  createSimulation,
+  PERSONALITY_NAMES
 } from './simulation/createSimulation.js';
 
 import {
@@ -122,6 +123,22 @@ let cameraShake =
 let cameraIntensity =
   1.0;
 
+let cameraMode =
+  0;
+
+let experienceMode =
+  'lab';
+
+const CAMERA_MODE_NAMES = [
+  'PULSO',
+  'ÓRBITA',
+  'CENITAL',
+  'INTERIOR 360'
+];
+
+let soloPersonality =
+  null;
+
 
 // ============================================================
 // COLORES
@@ -186,6 +203,9 @@ const discoBands =
 
 const laserPlanes =
   [];
+
+let discoDome =
+  null;
 
 const impactRings =
   [];
@@ -1449,6 +1469,11 @@ function updateMusic(
 
     );
 
+  const playsPersonality =
+    type =>
+      soloPersonality === null ||
+      soloPersonality === type;
+
 
   // ==========================================================
   // BEAT
@@ -1463,18 +1488,22 @@ function updateMusic(
       beatIndex;
 
 
-    playKick(
-      0.78 +
-      R *
-      0.22
-    );
+    if (playsPersonality(0)) {
+      playKick(
+        0.78 +
+        R *
+        0.22
+      );
+    }
 
 
-    playRumble(
-      0.28 +
-      R *
-      0.72
-    );
+    if (playsPersonality(1)) {
+      playRumble(
+        0.28 +
+        R *
+        0.72
+      );
+    }
 
 
     const beatInBar =
@@ -1487,11 +1516,13 @@ function updateMusic(
       beatInBar === 3
     ) {
 
-      playClap(
-        0.40 +
-        R *
-        0.60
-      );
+      if (playsPersonality(2)) {
+        playClap(
+          0.40 +
+          R *
+          0.60
+        );
+      }
 
     }
 
@@ -1501,9 +1532,11 @@ function updateMusic(
       beatInBar === 3
     ) {
 
-      playStab(
-        R
-      );
+      if (soloPersonality === null) {
+        playStab(
+          R
+        );
+      }
 
     }
 
@@ -1558,21 +1591,25 @@ function updateMusic(
       0
     ) {
 
-      playHat(
-        0.35 +
-        R *
-        0.50
-      );
+      if (playsPersonality(3)) {
+        playHat(
+          0.35 +
+          R *
+          0.50
+        );
+      }
 
     } else if (
       R > 0.35
     ) {
 
-      playHat(
-        0.24 +
-        R *
-        0.36
-      );
+      if (playsPersonality(3)) {
+        playHat(
+          0.24 +
+          R *
+          0.36
+        );
+      }
 
     }
 
@@ -1586,11 +1623,13 @@ function updateMusic(
         R > 0.30
       ) {
 
-        playOpenHat(
-          0.35 +
-          R *
-          0.60
-        );
+        if (playsPersonality(4)) {
+          playOpenHat(
+            0.35 +
+            R *
+            0.60
+          );
+        }
 
       }
 
@@ -1612,7 +1651,8 @@ function updateMusic(
         acidProbability
       ) {
 
-        playAcid(
+        if (playsPersonality(5)) {
+          playAcid(
 
           THREE.MathUtils.clamp(
 
@@ -1627,7 +1667,8 @@ function updateMusic(
 
           eighthIndex
 
-        );
+          );
+        }
 
       }
 
@@ -1665,7 +1706,8 @@ function updateMusic(
         s === 15
       ) {
 
-        playAcid(
+        if (playsPersonality(5)) {
+          playAcid(
 
           (
             R -
@@ -1675,7 +1717,8 @@ function updateMusic(
 
           s
 
-        );
+          );
+        }
 
       }
 
@@ -1689,9 +1732,11 @@ function updateMusic(
       28
     ) {
 
-      playBuildNoise(
-        R
-      );
+      if (soloPersonality === null) {
+        playBuildNoise(
+          R
+        );
+      }
 
     }
 
@@ -1707,6 +1752,49 @@ function updateMusic(
 function createDiscoVisuals(
   scene
 ) {
+
+  // Cúpula reflectante: la cámara queda dentro de una bola disco.
+  const domeGeometry =
+    new THREE.SphereGeometry(
+      29,
+      32,
+      20
+    );
+
+  const domeMaterial =
+    new THREE.MeshStandardMaterial({
+      color:
+        '#8A8A8A',
+
+      metalness:
+        1,
+
+      roughness:
+        0.16,
+
+      flatShading:
+        true,
+
+      side:
+        THREE.BackSide
+    });
+
+  discoDome =
+    new THREE.Mesh(
+      domeGeometry,
+      domeMaterial
+    );
+
+  discoDome.position.y =
+    2;
+
+  discoDome.material.emissive.set(
+    '#222222'
+  );
+
+  scene.add(
+    discoDome
+  );
 
   // ==========================================================
   // ONDAS
@@ -1877,6 +1965,28 @@ function updateClubLighting(
   elapsed,
   R
 ) {
+
+  if (
+    discoDome
+  ) {
+    discoDome.rotation.y =
+      elapsed *
+      0.018;
+
+    discoDome.rotation.x =
+      Math.sin(
+        elapsed *
+        0.07
+      ) *
+      0.035;
+
+    discoDome.material.emissiveIntensity =
+      0.025 +
+      R *
+      0.08 +
+      floorPulse *
+      0.12;
+  }
 
   // ==========================================================
   // ESTADO -> COLOR
@@ -2399,6 +2509,10 @@ function createHUD() {
       🎵 MODE 1
     </div>
 
+    <div id="cameraMode">
+      📷 CAMERA ÓRBITA
+    </div>
+
     <div id="cameraIntensityControl" style="display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 8px; background: rgba(0, 0, 0, 0.3); border-radius: 4px;">
       <label style="font-size: 11px; white-space: nowrap;">📷 CAMERA:</label>
       <input 
@@ -2536,7 +2650,15 @@ function createHUD() {
     mode:
       hud.querySelector(
         '#mode'
-      )
+      ),
+
+    cameraMode:
+      hud.querySelector(
+        '#cameraMode'
+      ),
+
+    root:
+      hud
 
   };
 
@@ -3201,9 +3323,72 @@ async function main() {
           mode
         );
 
+      },
+
+    onCameraModeChange:
+      mode => {
+        cameraMode =
+          mode;
+
+        hud.cameraMode.textContent =
+          `📷 CAMERA ${CAMERA_MODE_NAMES[cameraMode]}`;
+
+      },
+
+    onExperienceModeChange:
+      mode => {
+        experienceMode =
+          mode;
+
+        document.querySelector(
+          '.ui-panel'
+        )?.classList.toggle(
+          'performance-hidden',
+          mode === 'performance'
+        );
+
+        hud.root.classList.toggle(
+          'performance-hidden',
+          mode === 'performance'
+        );
       }
 
   });
+
+  function setSoloPersonality(
+    type
+  ) {
+    soloPersonality =
+      type;
+
+    for (const raver of simulation.ravers) {
+      raver.object.visible =
+        type === null ||
+        raver.type === type;
+    }
+
+    if (
+      selectedIndex >= 0
+    ) {
+      selectionRing.visible =
+        type === null ||
+        simulation.ravers[selectedIndex]?.type === type;
+    }
+
+    const soloStatus =
+      document.querySelector(
+        '#soloStatus'
+      );
+
+    if (
+      soloStatus
+    ) {
+      soloStatus.textContent =
+        type === null
+          ? 'NORMAL: TODOS · 3-8 AISLAR · 0/9 TODOS'
+          : `SONIDO: SOLO ${PERSONALITY_NAMES[type]} · 9 TODOS`;
+    }
+  }
 
 
   // ==========================================================
@@ -3345,6 +3530,43 @@ async function main() {
       // ======================================================
       // K
       // ======================================================
+
+      if (
+        event.key.toLowerCase() ===
+        'p'
+      ) {
+        document.querySelector(
+          '#performanceExperienceButton'
+        )?.click();
+      }
+
+      if (
+        event.key.toLowerCase() ===
+        'l'
+      ) {
+        document.querySelector(
+          '#labExperienceButton'
+        )?.click();
+      }
+
+      if (
+        event.key >= '3' &&
+        event.key <= '8'
+      ) {
+        setSoloPersonality(
+          Number(event.key) -
+          3
+        );
+      }
+
+      if (
+        event.key === '0' ||
+        event.key === '9'
+      ) {
+        setSoloPersonality(
+          null
+        );
+      }
 
       if (
         event.key === '['
@@ -3774,6 +3996,14 @@ async function main() {
       // ATERRIZAJES
       // ======================================================
 
+      for (const raver of simulation.ravers) {
+        raver.object.traverse(object => {
+          if (object.material && 'emissiveIntensity' in object.material) {
+            object.material.emissiveIntensity = 0.30;
+          }
+        });
+      }
+
       const groupEnergy = [0, 0, 0, 0, 0, 0];
 
       for (const impact of impacts) {
@@ -3812,7 +4042,7 @@ async function main() {
 
         if (impact.index !== undefined && simulation.ravers && simulation.ravers[impact.index]) {
           const raver = simulation.ravers[impact.index];
-          raver.traverse(object => {
+          raver.object.traverse(object => {
             if (object.material && 'emissiveIntensity' in object.material) {
               object.material.emissiveIntensity = visualStrength > 0.7
                 ? 4.0 + energy * 4.0
@@ -4103,41 +4333,150 @@ async function main() {
         0.9 *
         cameraIntensity;
 
-      camera.position.x =
-
+      const cameraShakeX =
         Math.sin(
-
           time *
           0.60
-
         ) *
+        cameraShake;
 
-        cameraShake +
-
-        cameraSway;
-
-
-      camera.position.y =
-
-        7.6 +
-
+      const cameraShakeY =
         Math.cos(
-
           time *
           0.48
-
         ) *
+        cameraShake;
 
-        cameraShake +
+      if (
+        cameraMode === 0
+      ) {
+        camera.position.x =
+          cameraShakeX +
+          cameraSway;
 
-        cameraHeightPulse +
+        camera.position.y =
+          7.6 +
+          cameraShakeY +
+          cameraHeightPulse +
+          pumpEffect;
 
-        pumpEffect;
+        camera.position.z =
+          17 +
+          cameraDepthPulse;
 
+        controls.target.set(
+          0,
+          0.8,
+          0
+        );
+      } else if (
+        cameraMode === 1
+      ) {
+        camera.position.x =
+          Math.cos(
+            beatPhaseForCamera *
+            0.125
+          ) *
+          10 *
+          cameraIntensity +
+          cameraShakeX;
 
-      camera.position.z =
-        17 +
-        cameraDepthPulse;
+        camera.position.y =
+          7.6 +
+          cameraHeightPulse *
+          0.5 +
+          pumpEffect;
+
+        camera.position.z =
+          Math.sin(
+            beatPhaseForCamera *
+            0.125
+          ) *
+          10 *
+          cameraIntensity +
+          cameraShakeY;
+
+        controls.target.set(
+          0,
+          0.8,
+          0
+        );
+      } else if (
+        cameraMode === 2
+      ) {
+        camera.position.x =
+          Math.sin(
+            beatPhaseForCamera *
+            0.08
+          ) *
+          3.5 *
+          cameraIntensity +
+          cameraShakeX;
+
+        camera.position.y =
+          15 +
+          cameraHeightPulse *
+          0.3 +
+          pumpEffect *
+          0.5;
+
+        camera.position.z =
+          Math.cos(
+            beatPhaseForCamera *
+            0.08
+          ) *
+          3.5 *
+          cameraIntensity +
+          cameraShakeY;
+
+        controls.target.set(
+          0,
+          0,
+          0
+        );
+      } else {
+        camera.position.x =
+          Math.sin(
+            beatPhaseForCamera
+          ) *
+          0.35 *
+          cameraIntensity +
+          cameraShakeX;
+
+        camera.position.y =
+          2.4 +
+          cameraHeightPulse *
+          0.25 +
+          pumpEffect *
+          0.6 +
+          cameraShakeY;
+
+        camera.position.z =
+          Math.cos(
+            beatPhaseForCamera *
+            0.08
+          ) *
+          0.35 *
+          cameraIntensity;
+
+        controls.target.set(
+          Math.sin(
+            beatPhaseForCamera *
+            0.08
+          ) *
+          6,
+          2.8,
+          Math.cos(
+            beatPhaseForCamera *
+            0.08
+          ) *
+          6
+        );
+
+        camera.position.y +=
+          cameraDepthPulse *
+          cameraIntensity;
+      }
 
 
       camera.updateProjectionMatrix();
