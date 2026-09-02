@@ -992,14 +992,13 @@ function applyPersonalityMaterial(
 // ============================================================
 
 export async function createSimulation({
-
   scene,
   renderer,
   params,
   count = 144,
-  modelUrl = RAVER_MODEL_URL
-
+  modelUrl = `${import.meta.env.BASE_URL}raver.glb`
 } = {}) {
+
 
   // ==========================================================
   // VALIDACIÓN
