@@ -2407,7 +2407,7 @@ function createHUD() {
         min="0" 
         max="200" 
         value="100" 
-        style="width: 80px; cursor: pointer; accent-color: #7CFF00;"
+        style="width: 80px; cursor: pointer; accent-color:#7CFF00;"
       />
       <span id="cameraIntensityValue" style="font-size: 11px; min-width: 30px;">100%</span>
     </div>

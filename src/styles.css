@@ -133,7 +133,7 @@ canvas {
 
   letter-spacing: 2px;
 
-  color: #7cff00;
+  color:#7cff00;
 }
 
 
@@ -434,7 +434,7 @@ transition:
 
   font-family: "Courier New", monospace;
 
-  color: #7CFF00;
+  color:#7CFF00;
 
   text-shadow: 0 0 10px #7CFF00, 0 0 20px #FF1493;
 
@@ -460,16 +460,16 @@ transition:
 }
 
 #hud #state {
-  color: #7CFF00;
+  color:#7CFF00;
 
   font-size: 16px;
 
-  text-shadow: 0 0 15px #7CFF00, 0 0 30px #00FFFF;
+  text-shadow: 0 0 15px#7CFF00, 0 0 30px #00FFFF;
 }
 
 #hud #mode {
   color: #FF1493;
-  text-shadow: 0 0 15px #FF1493, 0 0 20px #7CFF00;
+  text-shadow: 0 0 15px #FF1493, 0 0 20px#7CFF00;
   border-color:#7cff00;
   box-shadow:
     0 0 12px
