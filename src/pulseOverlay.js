@@ -9,8 +9,9 @@ let height = 0;
 
 function resize() {
   const ratio = Math.min(window.devicePixelRatio || 1, 2);
-  width = window.innerWidth;
-  height = window.innerHeight;
+  width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+  height = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+  if (!width || !height) return;
   pulseCanvas.width = width * ratio;
   pulseCanvas.height = height * ratio;
   pulseCanvas.style.width = `${width}px`;
@@ -48,6 +49,7 @@ function animate(time) {
 }
 
 window.addEventListener('resize', resize);
+new ResizeObserver(resize).observe(document.documentElement);
 window.addEventListener('pointerdown', (event) => addPulse(event.clientX, event.clientY, '#f28fbe'));
 window.addEventListener('keydown', (event) => {
   if (event.key === 'ArrowRight' || event.key === 'ArrowLeft' || event.key === ' ') {
@@ -56,5 +58,6 @@ window.addEventListener('keydown', (event) => {
 });
 
 resize();
+requestAnimationFrame(resize);
 addPulse();
 requestAnimationFrame(animate);
