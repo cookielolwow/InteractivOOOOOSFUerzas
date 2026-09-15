@@ -1,3 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root {
+  --accent: #009fe1;
+  --accent-2: #f28fbe;
+  --accent-3: #e83438;
+  --bg: #030914;
+  --ink: #f5f7fb;
+  --ink-dim: rgba(245, 247, 251, 0.68);
+
+  --safe-x: 4vw;
+  --safe-w: 39vw;
+  --safe-y: 12vh;
+  --safe-h: 65vh;
+}
 
 * {
   box-sizing: border-box;
@@ -5,453 +20,559 @@
 
 html,
 body {
-  width: 100%;
-  height: 100%;
   margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Sora', 'Space Grotesk', system-ui, sans-serif;
   overflow: hidden;
-  background: #050607;
-  font-family: "Courier New", monospace;
-}
-
-body {
-  position: relative;
 }
 
 #app {
-  position: fixed;
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* ============================================================
+   FONDO — el sistema de partículas SIEMPRE ocupa toda la pantalla
+   ============================================================ */
+
+.presentation-shell {
+  position: absolute;
+  inset: 0;
+}
+
+.background-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.photo-background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  opacity: 0.5;
+  filter: saturate(1.18) contrast(1.08) brightness(0.9);
+  transition: background-image 0.65s ease, opacity 0.65s ease;
+  /* Fundido hacia los bordes para que la foto se integre con el cosmos
+     en vez de cortarse como un rectángulo duro. */
+  -webkit-mask-image: radial-gradient(120% 120% at 50% 50%, #000 32%, rgba(0, 0, 0, 0.55) 68%, transparent 100%);
+  mask-image: radial-gradient(120% 120% at 50% 50%, #000 32%, rgba(0, 0, 0, 0.55) 68%, transparent 100%);
+}
+
+.legacy-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================================
+   OVERLAY / SLIDES
+   ============================================================ */
+
+.presentation-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.slides-layer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.9s ease, visibility 0.9s;
+  pointer-events: none;
+}
+
+.slide.is-active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Scrim SOLO detrás de la columna de texto — nunca cubre el sistema */
+.slide::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--safe-x) + var(--safe-w) + 4vw);
+  height: 100%;
+  background: linear-gradient(90deg, rgba(2, 5, 10, 0.72) 0%, rgba(2, 5, 10, 0.38) 55%, rgba(2, 5, 10, 0) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================================
+   COLUMNA DE TEXTO (coincide con el textSafe del canvas)
+   ============================================================ */
+
+.slide-content {
+  position: absolute;
+  left: var(--safe-x);
+  top: var(--safe-y);
+  width: var(--safe-w);
+  height: var(--safe-h);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.1vh;
+  z-index: 1;
+}
+
+.slide-kicker {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(0.7rem, 0.9vw, 1rem);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+}
+
+.slide-title {
+  margin: 0;
+  font-weight: 800;
+  line-height: 1.04;
+  font-size: clamp(2.1rem, 4.1vw, 4.6rem);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  text-shadow: 0 6px 40px rgba(0, 0, 0, 0.55);
+}
+
+.slide-subtitle {
+  margin: 0;
+  font-weight: 500;
+  font-size: clamp(1.05rem, 1.5vw, 1.7rem);
+  line-height: 1.3;
+  color: var(--ink-dim);
+  max-width: 92%;
+}
+
+.slide-tag {
+  margin-top: 0.6vh;
+  font-family: 'Space Grotesk', monospace;
+  font-size: clamp(0.68rem, 0.8vw, 0.85rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0.85;
+}
+
+.slide-content.hero .slide-title {
+  font-size: clamp(2.4rem, 5vw, 5.4rem);
+}
+
+.slide-content.quote .slide-title {
+  font-size: clamp(2rem, 3.6vw, 4rem);
+  font-style: italic;
+}
+
+.quote-mark {
+  position: absolute;
+  left: calc(var(--safe-x) - 1.2vw);
+  top: calc(var(--safe-y) - 9vh);
+  font-size: 12rem;
+  font-family: Georgia, serif;
+  color: var(--accent);
+  opacity: 0.22;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ============================================================
+   FOTOS — marco pequeño en la esquina, NUNCA a pantalla completa.
+   Deja siempre visible la mayor parte del sistema de partículas.
+   ============================================================ */
+
+/* La foto del slide vuelve a verse como UN FONDO artístico: se funde con el
+   cosmos, no tapa el sistema de partículas y no compite con el texto. */
+.slide-media {
+  position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  border-radius: 0;
+  overflow: hidden;
+  z-index: 0;
+  opacity: 0.34;
+  mix-blend-mode: luminance;
+  box-shadow: none;
+  background: #0a0e18;
+  /* Fundido radial: la foto respira en el centro y se disuelve en el espacio. */
+  -webkit-mask-image: radial-gradient(115% 115% at 62% 55%, #000 30%, rgba(0, 0, 0, 0.5) 66%, transparent 100%);
+  mask-image: radial-gradient(115% 115% at 62% 55%, #000 30%, rgba(0, 0, 0, 0.5) 66%, transparent 100%);
 }
 
-canvas {
-  display: block;
+/* Viñeta suave para integrar la foto con el fondo cósmico y dar aire al texto. */
+.slide-media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(2, 5, 10, 0.86), rgba(2, 5, 10, 0.26) 58%, rgba(2, 5, 10, 0.55)), linear-gradient(0deg, rgba(2, 5, 10, 0.6), transparent 52%, rgba(2, 5, 10, 0.32));
+}
+
+.slide-media img {
   width: 100%;
   height: 100%;
+  object-fit: cover;
+  filter: saturate(1.16) contrast(1.08);
+  display: block;
 }
 
-/* =========================================================
-   PANEL
-   ========================================================= */
-
-.ui-panel {
-  position: fixed;
-  top: 18px;
-  right: 18px;
-  width: 320px;
-  max-height: calc(100vh - 36px);
-  padding: 20px 18px 16px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  z-index: 100;
-
-  background:
-    linear-gradient(
-      180deg,
-      rgba(8, 10, 10, 0.97),
-      rgba(4, 6, 6, 0.94)
-    );
-
-  border: 1px solid rgba(124, 255, 0, 0.65);
-
-  box-shadow:
-    0 0 0 1px rgba(124, 255, 0, 0.08),
-    0 0 25px rgba(124, 255, 0, 0.08),
-    inset 0 0 25px rgba(124, 255, 0, 0.025);
-
-  color: #dfffcc;
-
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+/* En 'photo' (foto temática) la imagen tiene un poco más de presencia,
+   pero sigue siendo un fondo integrado, nunca un rectángulo duro. */
+.slide-content.photo ~ .slide-media,
+section:has(.slide-content.photo) .slide-media {
+  opacity: 0.5;
+  mix-blend-mode: screen;
 }
 
-.ui-panel::-webkit-scrollbar {
-  width: 5px;
+/* En slides con layout 'columns' bajamos un poco la foto para que las cards
+   del ecosistema Academia + Industria + Ciudad sigan siendo legibles. */
+section:has(.slide-content.columns) .slide-media {
+  opacity: 0.4;
 }
 
-.ui-panel::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.03);
+/* ============================================================
+   COLUMNS (Academia + Industria + Ciudad)
+   ============================================================ */
+
+.three-columns {
+  position: absolute;
+  left: var(--safe-x);
+  top: calc(var(--safe-y) + var(--safe-h) - 2vh);
+  width: var(--safe-w);
+  display: flex;
+  gap: 1vw;
+  z-index: 1;
 }
 
-.ui-panel::-webkit-scrollbar-thumb {
-  background: rgba(124, 255, 0, 0.45);
+.info-card {
+  flex: 1;
+  margin: 0;
+  padding: 1.1vw 1vw;
+  border-radius: 14px;
+  background: rgba(10, 16, 28, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(6px);
 }
 
-/* =========================================================
-   HEADER
-   ========================================================= */
-
-.ui-panel-header {
-  margin-bottom: 22px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid rgba(124, 255, 0, 0.25);
+.info-card span {
+  display: block;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: clamp(0.85rem, 1vw, 1.05rem);
+  color: var(--accent);
+  margin-bottom: 0.3em;
 }
 
-.ui-panel-title {
-  font-size: 18px;
-  font-weight: bold;
-  letter-spacing: 2px;
-  color: #7cff00;
+.info-card p {
+  margin: 0;
+  font-size: clamp(0.78rem, 0.95vw, 0.98rem);
+  color: var(--ink-dim);
+  line-height: 1.35;
 }
 
-.ui-panel-subtitle {
-  margin-top: 6px;
-  font-size: 9px;
-  letter-spacing: 2px;
-  color: rgba(223, 255, 204, 0.55);
+/* ============================================================
+   DUO (vision slide) — chips discretos junto a cada sol, no discos grandes
+   ============================================================ */
+
+.duo-layout {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
 }
 
-/* =========================================================
-   SECCIONES
-   ========================================================= */
-
-.ui-section {
-  margin-bottom: 25px;
-  padding-bottom: 21px;
-  border-bottom: 1px solid rgba(124, 255, 0, 0.12);
+.dual-disc {
+  position: absolute;
+  top: 16vh;
+  padding: 0.55em 1.1em;
+  border-radius: 999px;
+  background: rgba(8, 12, 22, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(6px);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(0.75rem, 0.95vw, 0.95rem);
+  letter-spacing: 0.04em;
 }
 
-.ui-section:last-of-type {
-  border-bottom: none;
+.dual-a {
+  left: 21vw;
+  color: var(--accent);
 }
 
-.ui-section-title {
-  margin-bottom: 16px;
-  font-size: 10px;
-  font-weight: bold;
-  letter-spacing: 2px;
-  color: #7cff00;
+.dual-b {
+  left: 63vw;
+  color: var(--accent-2);
 }
 
-/* =========================================================
-   SLIDERS
-   ========================================================= */
+/* ============================================================
+   QR
+   ============================================================ */
 
-.ui-slider-row {
-  width: 100%;
-  margin-bottom: 25px;
-}
-
-.ui-slider-row:last-child {
-  margin-bottom: 4px;
-}
-
-.ui-slider-header {
+.qr-layout {
+  position: absolute;
+  bottom: 6vh;
+  left: 0;
+  right: 0;
   display: flex;
   justify-content: space-between;
+  padding: 0 6vw;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.qr-card {
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  gap: 0.6em;
+}
+
+.qr-frame {
+  width: 128px;
+  height: 128px;
+  border-radius: 14px;
+  background: #fff;
+  padding: 10px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5);
+}
+
+.qr-frame img {
   width: 100%;
-  margin-bottom: 11px;
-}
-
-.ui-slider-label {
-  font-size: 10px;
-  letter-spacing: 1px;
-  color: rgba(235, 255, 225, 0.8);
-}
-
-.ui-slider-value {
-  min-width: 50px;
-  text-align: right;
-  font-size: 10px;
-  font-weight: bold;
-  color: #7cff00;
-}
-
-.ui-slider {
-  appearance: none;
-  -webkit-appearance: none;
+  height: 100%;
   display: block;
-  width: 100%;
-  height: 6px;
-  margin: 0;
-  padding: 0;
-  border: none;
-  outline: none;
-  background: rgba(124, 255, 0, 0.14);
-  cursor: pointer;
 }
 
-.ui-slider::-webkit-slider-runnable-track {
-  width: 100%;
-  height: 6px;
-  background: rgba(124, 255, 0, 0.14);
-  border: 1px solid rgba(124, 255, 0, 0.25);
+.qr-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.85rem;
+  color: var(--ink-dim);
 }
 
-.ui-slider::-webkit-slider-thumb {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 15px;
-  height: 15px;
-  margin-top: -6px;
-  border: 1px solid #d8ffbf;
-  border-radius: 0;
-  background: #7cff00;
-  box-shadow: 0 0 8px rgba(124, 255, 0, 0.7);
-  cursor: pointer;
+/* ============================================================
+   PANEL DE CONTROL — compacto, esquina, no compite con el sistema
+   ============================================================ */
+
+.control-panel {
+  position: absolute;
+  top: 3vh;
+  right: 3vw;
+  z-index: 5;
+  width: min(19vw, 260px);
+  padding: 1.1em 1.2em;
+  border-radius: 16px;
+  background: rgba(6, 10, 18, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
 }
 
-.ui-slider:hover::-webkit-slider-thumb {
-  box-shadow: 0 0 12px rgba(124, 255, 0, 1);
-}
-
-.ui-slider::-moz-range-track {
-  width: 100%;
-  height: 6px;
-  background: rgba(124, 255, 0, 0.14);
-  border: 1px solid rgba(124, 255, 0, 0.25);
-}
-
-.ui-slider::-moz-range-thumb {
-  width: 15px;
-  height: 15px;
-  border: 1px solid #d8ffbf;
-  border-radius: 0;
-  background: #7cff00;
-  box-shadow: 0 0 8px rgba(124, 255, 0, 0.7);
-  cursor: pointer;
-}
-
-/* =========================================================
-   BOTONES
-   ========================================================= */
-
-.ui-button-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.ui-button {
-  width: 100%;
-  min-height: 38px;
-  border: 1px solid rgba(124, 255, 0, 0.4);
-  background: rgba(124, 255, 0, 0.035);
-  color: rgba(223, 255, 204, 0.85);
-
-  font-family: "Courier New", monospace;
-  font-size: 9px;
-  letter-spacing: 1px;
-
-  cursor: pointer;
-
-  transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.1s ease;
-}
-
-.ui-button:hover {
-  background: rgba(124, 255, 0, 0.1);
-  color: #7cff00;
-  box-shadow: 0 0 12px rgba(124, 255, 0, 0.1);
-}
-
-.ui-button:active {
-  transform: translateY(1px);
-}
-
-.ui-button.active {
-  background: rgba(124, 255, 0, 0.16);
-  color: #7cff00;
-  box-shadow: 0 0 16px rgba(124, 255, 0, 0.5);
-}
-
-.ui-button-primary {
-  min-height: 42px;
-  color: #050607;
-  background: #7cff00;
-  border-color: #7cff00;
-  font-weight: bold;
-}
-
-.ui-button-primary:hover {
-  color: #050607;
-  background: #a6ff58;
-}
-
-/* =========================================================
-   HUD
-   ========================================================= */
-
-#hud {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  z-index: 100;
-
-  font-family: "Courier New", monospace;
-  color: #7cff00;
-  text-shadow:
-    0 0 10px #7cff00,
-    0 0 20px #ff1493;
-
-  font-weight: bold;
-  letter-spacing: 2px;
-}
-
-#hud > div {
-  margin-bottom: 8px;
-  font-size: 14px;
-  padding: 6px 12px;
-
-  background: rgba(124, 255, 0, 0.08);
-  border: 2px solid rgba(124, 255, 0, 0.5);
-
-  box-shadow:
-    0 0 15px rgba(124, 255, 0, 0.4),
-    inset 0 0 8px rgba(124, 255, 0, 0.1);
-
-  border-radius: 2px;
-}
-
-#hud #state {
-  color: #7cff00;
-  font-size: 16px;
-  text-shadow:
-    0 0 15px #7cff00,
-    0 0 30px #00ffff;
-}
-
-#hud #mode {
-  color: #ff1493;
-  text-shadow:
-    0 0 15px #ff1493,
-    0 0 20px #7cff00;
-
-  border-color: #7cff00;
-
-  box-shadow:
-    0 0 12px rgba(124, 255, 0, 0.18);
-}
-
-/* =========================================================
-   MODO
-   ========================================================= */
-
-.ui-mode-description {
-  margin-bottom: 12px;
-  font-size: 9px;
-  letter-spacing: 1px;
-  color: rgba(223, 255, 204, 0.48);
-}
-
-/* =========================================================
-   LEYENDA
-   ========================================================= */
-
-.ui-legend {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 9px 12px;
-}
-
-.ui-legend-item {
+.panel-top {
   display: flex;
   align-items: center;
-  min-width: 0;
+  justify-content: space-between;
+  gap: 0.6em;
 }
 
-.ui-legend-dot {
-  flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
-  margin-right: 8px;
-}
-
-.ui-legend-name {
-  min-width: 0;
-  font-size: 8px;
-  letter-spacing: 1px;
-  color: rgba(235, 255, 225, 0.72);
-  white-space: nowrap;
-}
-
-/* =========================================================
-   ESTADOS
-   ========================================================= */
-
-.ui-state-list {
+.brand {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  line-height: 1;
 }
 
-.ui-state-item {
-  padding: 9px 10px;
-  border-left: 2px solid rgba(124, 255, 0, 0.35);
-  background: rgba(255, 255, 255, 0.018);
+.brand-main {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
 }
 
-.ui-state-name {
-  font-size: 9px;
-  font-weight: bold;
-  letter-spacing: 1.5px;
-  color: #7cff00;
+.brand-sub {
+  font-size: 0.65rem;
+  letter-spacing: 0.16em;
+  color: var(--ink-dim);
 }
 
-.ui-state-description {
-  margin-top: 4px;
-  font-size: 8px;
-  color: rgba(223, 255, 204, 0.42);
+.toggle-ui {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  padding: 0.45em 0.7em;
+  border-radius: 999px;
+  cursor: pointer;
 }
 
-/* =========================================================
-   CONTROLES
-   ========================================================= */
+.toggle-ui:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+}
 
-.ui-controls-list {
+.panel-controls {
+  margin-top: 1em;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 0.8em;
 }
 
-.ui-control-item {
-  padding: 7px 8px;
-  background: rgba(255, 255, 255, 0.018);
-  border-left: 1px solid rgba(124, 255, 0, 0.22);
-
-  font-size: 8px;
-  line-height: 1.4;
-  color: rgba(223, 255, 204, 0.58);
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+  font-size: 0.72rem;
+  color: var(--ink-dim);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-/* =========================================================
-   TEXTO PEQUEÑO
-   ========================================================= */
-
-.ui-small-text {
-  margin-top: 10px;
-  font-size: 8px;
-  line-height: 1.5;
-  color: rgba(223, 255, 204, 0.4);
+.field select {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 0.45em 0.6em;
+  font-family: inherit;
+  font-size: 0.85rem;
 }
 
-/* =========================================================
-   FOOTER
-   ========================================================= */
-
-.ui-panel-footer {
-  padding-top: 4px;
-  font-size: 7px;
-  letter-spacing: 1.3px;
-  line-height: 1.5;
-  color: rgba(124, 255, 0, 0.35);
-  text-align: center;
+.counter-wrap {
+  align-self: center;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.9rem;
+  color: var(--ink-dim);
+  letter-spacing: 0.06em;
 }
 
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
+#counterCurrent {
+  color: var(--ink);
+  font-weight: 700;
+}
 
-@media (max-width: 700px) {
-  .ui-panel {
-    top: 10px;
-    right: 10px;
-    width: 290px;
-    max-height: calc(100vh - 20px);
+.counter-divider {
+  margin: 0 0.3em;
+  opacity: 0.5;
+}
+
+.nav-row {
+  display: flex;
+  gap: 0.6em;
+}
+
+.nav-button {
+  flex: 1;
+  padding: 0.6em 0.4em;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.nav-button:hover {
+  border-color: var(--accent);
+}
+
+.nav-button.primary {
+  background: linear-gradient(120deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+  font-weight: 600;
+}
+
+/* ============================================================
+   IDENTIDAD INSTITUCIONAL — esquina opuesta, pequeña
+   ============================================================ */
+
+.institutional-identity {
+  position: absolute;
+  top: 3vh;
+  left: 3vw;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.identity-lockup {
+  height: clamp(28px, 3.4vw, 46px);
+  width: auto;
+  opacity: 0.92;
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.5));
+}
+
+/* ============================================================
+   MODO PRESENTACIÓN (UI oculta)
+   ============================================================ */
+
+body.ui-hidden .panel-controls,
+body.ui-hidden .institutional-identity {
+  display: none;
+}
+
+body.ui-hidden .control-panel {
+  width: auto;
+  padding: 0.5em;
+  background: rgba(6, 10, 18, 0.4);
+}
+
+body.ui-hidden .brand {
+  display: none;
+}
+
+/* ============================================================
+   RESPONSIVE — pantallas más angostas
+   ============================================================ */
+
+@media (max-width: 900px) {
+  :root {
+    --safe-x: 5vw;
+    --safe-w: 90vw;
+    --safe-y: 9vh;
+    --safe-h: 42vh;
+  }
+
+  .slide::before {
+    width: 100%;
+    height: 60%;
+    top: auto;
+    bottom: 0;
+    background: linear-gradient(0deg, rgba(2, 5, 10, 0.85) 0%, rgba(2, 5, 10, 0.35) 60%, rgba(2, 5, 10, 0) 100%);
+  }
+
+  .slide-media {
+    right: 5vw;
+    bottom: auto;
+    top: 4vh;
+    width: 44vw;
+    aspect-ratio: 1 / 1;
+  }
+
+  .three-columns {
+    flex-direction: column;
+    top: auto;
+    bottom: 3vh;
+  }
+
+  .control-panel {
+    width: auto;
   }
 }

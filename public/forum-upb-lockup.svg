@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 150" role="img" aria-labelledby="title desc">
+  <title id="title">UPB Forum Centro de Eventos</title>
+  <desc id="desc">Logotipo institucional UPB y Forum Centro de Eventos</desc>
+  <g fill="#f4f1ed">
+    <text x="0" y="108" font-family="Georgia, Times New Roman, serif" font-size="112" font-weight="700" letter-spacing="-11">UPB</text>
+    <rect x="300" y="25" width="2" height="102" opacity=".8"/>
+    <text x="335" y="77" font-family="Arial, sans-serif" font-size="56" font-weight="300" letter-spacing="2">FÓRUM</text>
+    <text x="338" y="111" font-family="Arial, sans-serif" font-size="19" letter-spacing="4">CENTRO DE EVENTOS</text>
+  </g>
+</svg>

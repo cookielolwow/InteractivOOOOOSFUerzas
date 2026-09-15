@@ -1,5 +1,11 @@
 import { defineConfig } from 'vite';
 
-export default defineConfig({
-  base: '/InteractivOOOOOSFUerzas/',
-});
+// En desarrollo servimos desde la RAÍZ (http://localhost:5173/),
+// porque el servidor de Vite ya corre dentro de la carpeta del proyecto.
+// Solo al COMPILAR (build) usamos la subcarpeta que exige GitHub Pages
+// (https://usuario.github.io/InteractivOOOOOSFUerzas/).
+//
+// Así la URL local siempre funciona sin escribir la subcarpeta a mano.
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/InteractivOOOOOSFUerzas/' : '/',
+}));
