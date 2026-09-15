@@ -65,7 +65,7 @@ body {
   opacity: 0.5;
   filter: saturate(1.18) contrast(1.08) brightness(0.9);
   transition: background-image 0.65s ease, opacity 0.65s ease;
-  opacity: 0.16;
+  opacity: 0.11;
   mix-blend-mode: screen;
   -webkit-mask-image: radial-gradient(120% 120% at 50% 50%, #000 32%, rgba(0, 0, 0, 0.55) 68%, transparent 100%);
   mask-image: radial-gradient(120% 120% at 50% 50%, #000 32%, rgba(0, 0, 0, 0.55) 68%, transparent 100%);
@@ -258,7 +258,7 @@ body {
   border-radius: 0;
   overflow: hidden;
   z-index: 0;
-  opacity: 0.16;
+  opacity: 0.11;
   mix-blend-mode: screen;
   box-shadow: none;
   background: #0a0e18;
@@ -287,14 +287,14 @@ body {
    pero sigue siendo un fondo integrado, nunca un rectángulo duro. */
 .slide-content.photo ~ .slide-media,
 section:has(.slide-content.photo) .slide-media {
-  opacity: 0.28;
+  opacity: 0.2;
   mix-blend-mode: screen;
 }
 
 /* En slides con layout 'columns' bajamos un poco la foto para que las cards
    del ecosistema Academia + Industria + Ciudad sigan siendo legibles. */
 section:has(.slide-content.columns) .slide-media {
-  opacity: 0.22;
+  opacity: 0.16;
 }
 
 /* ============================================================
