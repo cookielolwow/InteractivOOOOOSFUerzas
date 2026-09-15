@@ -95,6 +95,64 @@ body {
   pointer-events: none;
 }
 
+.live-status {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  gap: 0.5em 0.8em;
+  min-width: 230px;
+  padding: 0.7em 0.9em;
+  color: var(--ink);
+  background: rgba(3, 9, 20, 0.72);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+}
+
+.control-panel .live-status {
+  position: static;
+  width: 100%;
+  min-width: 0;
+  margin-top: 0.4em;
+}
+
+body.ui-hidden .control-panel {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.live-status-label {
+  grid-column: 1 / -1;
+  color: var(--ink-dim);
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+}
+
+.live-status strong,
+.live-status #statusTime {
+  color: var(--accent);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.76rem;
+}
+
+.status-energy {
+  width: 62px;
+  height: 5px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 99px;
+}
+
+.status-energy i {
+  display: block;
+  width: 40%;
+  height: 100%;
+  background: var(--accent-2);
+  box-shadow: 0 0 12px var(--accent-2);
+  transition: width 120ms linear;
+}
+
 /* ============================================================
    OVERLAY / SLIDES
    ============================================================ */
@@ -584,17 +642,35 @@ section:has(.slide-content.columns) .slide-media {
 
 .institutional-identity {
   position: absolute;
-  top: 3vh;
+  top: 2.5vh;
   left: 3vw;
   z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
   pointer-events: none;
 }
 
 .identity-lockup {
-  height: clamp(28px, 3.4vw, 46px);
+  height: clamp(64px, 7vw, 108px);
   width: auto;
-  opacity: 0.92;
-  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.5));
+  opacity: 1;
+  filter: brightness(0) invert(1) drop-shadow(0 4px 18px rgba(255, 255, 255, 0.42));
+}
+
+.identity-forum {
+  height: clamp(78px, 8.5vw, 128px);
+}
+
+.identity-upb {
+  height: clamp(64px, 7vw, 104px);
+}
+
+.identity-divider {
+  width: 1px;
+  height: clamp(54px, 5.8vw, 88px);
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
 }
 
 /* ============================================================
