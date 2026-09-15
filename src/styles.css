@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 :root {
   --accent: #009fe1;
@@ -49,6 +49,12 @@ body {
   z-index: 0;
 }
 
+.solar-host {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
 .photo-background {
   position: absolute;
   inset: 0;
@@ -59,8 +65,8 @@ body {
   opacity: 0.5;
   filter: saturate(1.18) contrast(1.08) brightness(0.9);
   transition: background-image 0.65s ease, opacity 0.65s ease;
-  /* Fundido hacia los bordes para que la foto se integre con el cosmos
-     en vez de cortarse como un rectángulo duro. */
+  opacity: 0.16;
+  mix-blend-mode: screen;
   -webkit-mask-image: radial-gradient(120% 120% at 50% 50%, #000 32%, rgba(0, 0, 0, 0.55) 68%, transparent 100%);
   mask-image: radial-gradient(120% 120% at 50% 50%, #000 32%, rgba(0, 0, 0, 0.55) 68%, transparent 100%);
 }
@@ -71,6 +77,22 @@ body {
   height: 100%;
   position: relative;
   z-index: 1;
+  animation: solar-field-drift 11s ease-in-out infinite;
+  transform-origin: 68% 58%;
+}
+
+@keyframes solar-field-drift {
+  0%, 100% { transform: scale(1) translate3d(0, 0, 0); filter: brightness(1); }
+  50% { transform: scale(1.025) translate3d(-0.35%, 0.2%, 0); filter: brightness(1.08); }
+}
+
+.pulse-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
 }
 
 /* ============================================================
@@ -103,6 +125,33 @@ body {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+}
+
+.slide.is-active .slide-content {
+  animation: content-drift 5.5s ease-in-out infinite;
+}
+
+.slide.is-active .slide-title {
+  animation: title-pulse 3.8s ease-in-out infinite;
+}
+
+.slide.is-active .slide-media img {
+  animation: image-drift 12s ease-in-out infinite alternate;
+}
+
+@keyframes content-drift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0.8vw, -0.7vh, 0); }
+}
+
+@keyframes title-pulse {
+  0%, 100% { text-shadow: 0 6px 40px rgba(0, 0, 0, 0.55); }
+  50% { text-shadow: 0 6px 48px var(--accent), 0 0 18px rgba(242, 143, 190, 0.28); }
+}
+
+@keyframes image-drift {
+  0% { transform: scale(1) translate3d(0, 0, 0); }
+  100% { transform: scale(1.06) translate3d(-1.2%, -0.8%, 0); }
 }
 
 /* Scrim SOLO detrás de la columna de texto — nunca cubre el sistema */
@@ -209,8 +258,8 @@ body {
   border-radius: 0;
   overflow: hidden;
   z-index: 0;
-  opacity: 0.34;
-  mix-blend-mode: luminance;
+  opacity: 0.16;
+  mix-blend-mode: screen;
   box-shadow: none;
   background: #0a0e18;
   /* Fundido radial: la foto respira en el centro y se disuelve en el espacio. */
@@ -238,14 +287,14 @@ body {
    pero sigue siendo un fondo integrado, nunca un rectángulo duro. */
 .slide-content.photo ~ .slide-media,
 section:has(.slide-content.photo) .slide-media {
-  opacity: 0.5;
+  opacity: 0.28;
   mix-blend-mode: screen;
 }
 
 /* En slides con layout 'columns' bajamos un poco la foto para que las cards
    del ecosistema Academia + Industria + Ciudad sigan siendo legibles. */
 section:has(.slide-content.columns) .slide-media {
-  opacity: 0.4;
+  opacity: 0.22;
 }
 
 /* ============================================================
@@ -469,6 +518,35 @@ section:has(.slide-content.columns) .slide-media {
 .counter-divider {
   margin: 0 0.3em;
   opacity: 0.5;
+}
+
+.live-readout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55em;
+  padding: 0.7em;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.live-readout div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18em;
+}
+
+.live-readout span {
+  color: var(--ink-dim);
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+}
+
+.live-readout strong {
+  color: var(--accent);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
 }
 
 .nav-row {
