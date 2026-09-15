@@ -1,3 +1,9 @@
+import {
+  PERSONALITY_COLORS,
+  PERSONALITY_NAMES
+} from '../simulation/createSimulation.js';
+
+
 function createSectionTitle(text) {
   const title =
     document.createElement(
@@ -184,7 +190,11 @@ export function createLabPanel({
 
   onDrop,
 
-  onModeChange
+  onModeChange,
+
+  onCameraModeChange,
+
+  onExperienceModeChange
 }) {
   const panel =
     document.createElement(
@@ -453,6 +463,191 @@ export function createLabPanel({
 
 
   // ========================================================
+  // CÁMARA
+  // ========================================================
+
+  const cameraSection =
+    document.createElement(
+      'section'
+    );
+
+  cameraSection.className =
+    'ui-section';
+
+  cameraSection.append(
+    createSectionTitle(
+      'VISTA DE CÁMARA'
+    )
+  );
+
+  const cameraDescription =
+    document.createElement(
+      'div'
+    );
+
+  cameraDescription.className =
+    'ui-mode-description';
+
+  cameraDescription.textContent =
+    'MOVIMIENTOS SINCRONIZADOS AL BPM';
+
+  const cameraButtons =
+    document.createElement(
+      'div'
+    );
+
+  cameraButtons.className =
+    'ui-button-grid';
+
+  const cameraModes = [
+    'PULSO',
+    'ÓRBITA',
+    'CENITAL',
+    'INTERIOR 360'
+  ];
+
+  const cameraModeButtons =
+    cameraModes.map(
+      (label, index) => {
+        const button =
+          createButton(
+            label,
+            () => {
+              onCameraModeChange?.(
+                index
+              );
+
+              cameraModeButtons.forEach(
+                (modeButton, modeIndex) => {
+                  modeButton.classList.toggle(
+                    'active',
+                    modeIndex === index
+                  );
+                }
+              );
+            }
+          );
+
+        if (
+          index === 0
+        ) {
+          button.classList.add(
+            'active'
+          );
+        }
+
+        cameraButtons.append(
+          button
+        );
+
+        return button;
+      }
+    );
+
+  cameraSection.append(
+    cameraDescription,
+    cameraButtons
+  );
+
+
+  // ========================================================
+  // EXPERIENCIA
+  // ========================================================
+
+  const experienceSection =
+    document.createElement(
+      'section'
+    );
+
+  experienceSection.className =
+    'ui-section';
+
+  experienceSection.append(
+    createSectionTitle(
+      'EXPERIENCIA'
+    )
+  );
+
+  const experienceDescription =
+    document.createElement(
+      'div'
+    );
+
+  experienceDescription.className =
+    'ui-mode-description';
+
+  experienceDescription.textContent =
+    'LAB CON CONTROLES / PERFORMANCE LIMPIA';
+
+  const experienceButtons =
+    document.createElement(
+      'div'
+    );
+
+  experienceButtons.className =
+    'ui-button-grid';
+
+  let labButton;
+  let performanceButton;
+
+  labButton =
+    createButton(
+      'LAB',
+      () => {
+        onExperienceModeChange?.(
+          'lab'
+        );
+
+        labButton.classList.add(
+          'active'
+        );
+
+        performanceButton.classList.remove(
+          'active'
+        );
+      }
+    );
+
+  performanceButton =
+    createButton(
+      'PERFORMANCE',
+      () => {
+        onExperienceModeChange?.(
+          'performance'
+        );
+
+        performanceButton.classList.add(
+          'active'
+        );
+
+        labButton.classList.remove(
+          'active'
+        );
+      }
+    );
+
+  labButton.classList.add(
+    'active'
+  );
+
+  labButton.id =
+    'labExperienceButton';
+
+  performanceButton.id =
+    'performanceExperienceButton';
+
+  experienceButtons.append(
+    labButton,
+    performanceButton
+  );
+
+  experienceSection.append(
+    experienceDescription,
+    experienceButtons
+  );
+
+
+  // ========================================================
   // PERTURBACIÓN
   // ========================================================
 
@@ -524,55 +719,23 @@ export function createLabPanel({
   );
 
 
-  const personalities = [
-    {
-      name:
-        'KICK',
+  const soloStatus =
+    document.createElement(
+      'div'
+    );
 
-      color:
-        '#FF3B30'
-    },
+  soloStatus.className =
+    'ui-solo-status';
 
-    {
-      name:
-        'RUMBLE',
+  soloStatus.id =
+    'soloStatus';
 
-      color:
-        '#8E44FF'
-    },
+  soloStatus.textContent =
+    'NORMAL: TODOS · 3-8 AISLAR · 0/9 TODOS';
 
-    {
-      name:
-        'CLAP',
-
-      color:
-        '#FFFFFF'
-    },
-
-    {
-      name:
-        'CLOSED HAT',
-
-      color:
-        '#00D9FF'
-    },
-
-    {
-      name:
-        'OPEN HAT',
-
-      color:
-        '#FF2BA6'
-    },
-
-    {
-      name:
-        'ACID',
-
-      color:
-        '#7CFF00'
-    }
-  ];
+  personalitySection.append(
+    soloStatus
+  );
 
 
   const legend =
@@ -585,9 +748,18 @@ export function createLabPanel({
 
 
   for (
-    const personality
-    of personalities
+    let index = 0;
+    index < PERSONALITY_NAMES.length;
+    index++
   ) {
+    const personality = {
+      name:
+        PERSONALITY_NAMES[index],
+
+      color:
+        PERSONALITY_COLORS[index]
+    };
+
     const item =
       document.createElement(
         'div'
@@ -621,7 +793,7 @@ export function createLabPanel({
       'ui-legend-name';
 
     name.textContent =
-      personality.name;
+      `${index + 3} · ${personality.name}`;
 
 
     item.append(
@@ -843,6 +1015,8 @@ export function createLabPanel({
     header,
     simulationSection,
     modeSection,
+    cameraSection,
+    experienceSection,
     perturbSection,
     personalitySection,
     stateSection,

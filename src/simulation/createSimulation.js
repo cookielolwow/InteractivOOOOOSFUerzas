@@ -36,11 +36,11 @@ export const PERSONALITIES = {
 };
 
 
-const PERSONALITY_COLORS = [
+export const PERSONALITY_COLORS = [
 
   '#FF0080',
 
-  '#00FF00',
+  '#FF8A00',
 
   '#FFFF00',
 
@@ -53,7 +53,7 @@ const PERSONALITY_COLORS = [
 ];
 
 
-const PERSONALITY_NAMES = [
+export const PERSONALITY_NAMES = [
 
   'KICK',
 
