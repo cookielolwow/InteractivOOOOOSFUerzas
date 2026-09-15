@@ -677,8 +677,7 @@ section:has(.slide-content.columns) .slide-media {
    MODO PRESENTACIÓN (UI oculta)
    ============================================================ */
 
-body.ui-hidden .panel-controls,
-body.ui-hidden .institutional-identity {
+body.ui-hidden .panel-controls {
   display: none;
 }
 
