@@ -6,12 +6,6 @@ if (identity) {
 }
 
 function applyPresentationDefaults() {
-  const language = document.querySelector('#languageSelect');
-  if (language && language.value !== 'pt') {
-    language.value = 'pt';
-    language.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-
   document.querySelectorAll('.slide-tag, .slide-kicker').forEach((node) => {
     if (/^FOTO\s+\d+$/i.test(node.textContent.trim())) {
       node.textContent = 'registro visual';
@@ -20,4 +14,3 @@ function applyPresentationDefaults() {
 }
 
 applyPresentationDefaults();
-new MutationObserver(applyPresentationDefaults).observe(document.querySelector('#app'), { childList: true, subtree: true });
