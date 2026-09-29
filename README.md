@@ -1,89 +1,63 @@
-<img width="360" height="360" alt="image" src="https://github.com/user-attachments/assets/9f87f7c2-0b78-4473-ab5f-344287dfae66" />
+# PinkPantheress — "Girl Like Me"
+### Instrumento Visual de Agentes Autónomos (The Nature of Code, Cap. 5)
 
+Instrumento interactivo para la Web diseñado para interpretar en vivo la canción **"Girl Like Me"** de **PinkPantheress** (UK Garage / 2-step breakbeat, 138 BPM), basado en la estética visual Y2K cyber-dreamcore y la edición sincopada de su video musical oficial.
 
-[App desplegada](https://juanferfranco.github.io/forces-instrument-u3/)
+Construido utilizando exclusivamente la paleta algorítmica de **Steering Behaviors (Craig Reynolds)**, **Flocking**, **Flow Fields (Campos de Flujo por Ruido Simplex)** e **Interactive Physarum (Simulación de Moho del Fango)**.
 
-Proyecto base que servirá como caso de estudio. Nos permitirá abordar los conceptos 
-necesarios para comprender el código generado por la IA al momente 
-de materializar las ideas.
+---
 
-## Requisitos
+## Características Principales
 
-- Node.js 22 recomendado (Vite 8 requiere Node 20.19+ o 22.12+).
-- Navegador con WebGPU habilitado; usa una versión actual de Chrome, Edge o un navegador con soporte equivalente.
-- Git necesario para clonar el repositorio y trabajar localmente.
+- **Agentes con Percepción Limitada**: Cada agente percibe a sus vecinos locales en un radio acotado, consulta el campo vectorial de flujo y utiliza 3 sensores frontales para quimioatracción sobre un búfer de estelas bioluminiscentes (*Physarum polycephalum*).
+- **Escalado Rítmico Cuantizado (*Stepped Scaling*)**: Emula la edición del video musical de PinkPantheress mediante saltos discretos de escala y ráfagas de impulsos sincopados que reaccionan a tus toques de ritmo.
+- **Interpretación Humana Activa**: Sin automatización ciega por micrófono o análisis de audio. El ejecutante escucha, decide y conduce el sistema en tiempo real.
+- **Partitura Visual (Visual Score)**: Guía de interpretación en 6 secciones (Intro, Verso 1, Coro 1, Puente, Coro 2 y Outro) con presets de parámetros y pistas de acción en tiempo real.
+- **Estética Y2K Camcorder**: HUD estilo miniDV de los años 2000, paleta cromática Baby Pink, Fucsia Neón, Lavanda Cyber y destellos brillantes de 4 puntas.
+- **Acompañamiento de Audio Opcional**: Incluye un sintetizador de base 2-step a 138 BPM incorporado y un cargador de archivos MP3 para ensayar la canción localmente.
 
-## Clonar y poner en funcionamiento
+---
 
-Clona el repositorio y entra en la carpeta del proyecto:
+## Controles en Vivo
 
-```bash
-git clone https://github.com/juanferfranco/forces-instrument-u3.git
-cd forces-instrument-u3
-```
+| Control | Acción | Descripción |
+| :--- | :--- | :--- |
+| <kbd>ESPACIO</kbd> / <kbd>Clic</kbd> | **Escalado Rítmico (Beat Step)** | Dispara el salto de escala cuantizado sincronizado con la percusión. |
+| <kbd>L</kbd> / Botón | **Reproducir "Girl Like Me"** | Reproduce/Pausa la canción oficial cargada desde `src/sonido/`. |
+| <kbd>C</kbd> | **Cohesión (Vocal)** | Incrementa la cohesión para agrupar el enjambre durante la voz íntima. |
+| <kbd>V</kbd> | **Separación (Breakbeat)** | Dispersión centrífuga explosiva para los drops de batería. |
+| <kbd>F</kbd> | **Flow Field (Torbellino)** | Alterna modos de flujo (flujo regular, torbellino, ondas). |
+| <kbd>T</kbd> | **Estelas Physarum** | Activa/desactiva la fosforescencia y rastro químico. |
+| <kbd>1</kbd> - <kbd>6</kbd> | **Secciones de la Partitura** | Salta a los movimientos de la canción (Intro, Verso, Coro, Puente, etc.). |
+| <kbd>P</kbd> | **Metrónomo 2-Step** | Activa/detiene la base rítmica sintetizada a 138 BPM. |
+| <kbd>M</kbd> | **Ocultar / Mostrar HUD** | Modo minimalista limpio para la proyección en vivo. |
+| <kbd>R</kbd> | **Reiniciar Enjambre** | Reposiciona los agentes en el centro. |
+| <kbd>F11</kbd> | **Pantalla Completa** | Activa pantalla completa para el performance. |
 
-Instala las dependencias:
+---
 
+## Instalación y Ejecución
+
+1. Clona el repositorio e instala las dependencias:
 ```bash
 npm install
 ```
 
-Inicia el servidor de desarrollo:
-
+2. Inicia el servidor de desarrollo:
 ```bash
 npm run dev
 ```
 
-Abre en el navegador la URL local que muestra Vite. Se necesita un navegador con WebGPU habilitado.
+3. Abre en tu navegador la URL local indicada por Vite (ej. `http://localhost:5173/`).
 
-## Ejecutar
-
-```bash
-npm install
-npm run dev
-```
-
-Abre la URL que imprime Vite.
-
-## Build de producción
-
+4. Para compilar la versión de producción:
 ```bash
 npm run build
 npm run preview
 ```
 
-`preview` sirve el contenido construido en `dist/`; úsalo antes de publicar.
+---
 
-## Controles
+## Documentación y Bitácora
 
-- `P`: LAB / PERFORMANCE.
-- `R`: reset.
-- `1..5`: escenarios de exploración.
-- puntero: mueve el atractor sobre el plano Z=0.
-- espacio (PERFORMANCE): invierte temporalmente el signo de la fuerza radial.
-
-## Publicar en GitHub Pages
-
-El repositorio ya incluye `.github/workflows/deploy.yml`.
-
-1. Crea un repositorio en GitHub y sube estos archivos a la rama `main`.
-2. En **Settings → Pages**, selecciona **GitHub Actions** como fuente.
-3. Haz push a `main`.
-4. El workflow ejecutará `npm install`, build y despliegue.
-
-`vite.config.js` usa `base: './'` para que los assets sean relativos y el mismo build funcione bajo una ruta de proyecto de GitHub Pages.
-
-## Archivos que debes entender primero
-
-1. `src/main.js`: escena, cámara, renderer, loop, interacción y modos.
-2. `src/simulation/parameters.js`: parámetros/uniforms accesibles desde CPU.
-3. `src/simulation/createSimulation.js`: estado GPU, fuerzas, integración y render.
-4. `src/ui/labPanel.js`: controles del laboratorio y escenarios de exploración.
-
-Lee la `GUIA_ESTUDIANTE.md` para comprender la estructura del proyecto y 
-cómo se relacionan los archivos.
-
-## Documentación complementaria
-
-- [Guía del estudiante](GUIA_ESTUDIANTE.md)
-- [Validación y depuración](PRUEBAS_Y_DEPURACION.md)
+Consulta la autoevaluación detallada y el fundamento teórico completo en [BITACORA_CAMBIOS.md](file:///c:/Users/camil/InteractivOOOOOSFUerzas/BITACORA_CAMBIOS.md).
