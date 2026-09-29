@@ -35,7 +35,7 @@ export class PhysarumTrailBuffer {
 
     this.ctx.save();
     this.ctx.globalAlpha = Math.min(1.0, 0.45 * intensity);
-    this.ctx.shadowBlur = 10 * intensity;
+    this.ctx.shadowBlur = 25 * intensity;
     this.ctx.shadowColor = colorHex;
     this.ctx.fillStyle = colorHex;
 
@@ -82,6 +82,7 @@ export class PhysarumTrailBuffer {
 
     targetCtx.save();
     targetCtx.globalAlpha = opacity;
+    targetCtx.globalCompositeOperation = 'screen';
     targetCtx.drawImage(this.canvas, 0, 0);
     targetCtx.restore();
   }

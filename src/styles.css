@@ -209,17 +209,23 @@ canvas.main-canvas {
 }
 
 /* ============================================================
-   VISUAL SCORE TIMELINE
+   VISUAL SCORE TIMELINE (RHYTHM HEAVEN TRACK)
    ============================================================ */
+
+@keyframes rhythmBounce { 
+  0% { transform: scale(1); } 
+  50% { transform: scale(1.02); } 
+  100% { transform: scale(1); } 
+}
 
 .hud-score-navigator {
   margin-top: 10px;
   pointer-events: auto;
   background: var(--glass-bg);
   backdrop-filter: blur(8px);
-  border: 2px solid var(--gold);
-  box-shadow: 3px 3px 0px var(--cherry-red);
-  border-radius: 0;
+  border: 4px solid var(--gold);
+  clip-path: polygon(2% 0, 100% 2%, 98% 100%, 0 98%); /* Scrapbook jagged edge */
+  box-shadow: 6px 6px 0px var(--cherry-red);
   padding: 10px 16px;
   transform: rotate(0.5deg);
 }
@@ -228,7 +234,7 @@ canvas.main-canvas {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   font-size: 12px;
 }
 
@@ -238,6 +244,9 @@ canvas.main-canvas {
   color: var(--gold);
   font-weight: 700;
   font-family: 'Playfair Display', serif;
+  background: var(--black);
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 .score-current-info {
@@ -250,7 +259,7 @@ canvas.main-canvas {
   font-family: 'Permanent Marker', cursive;
   color: var(--cherry-red);
   font-size: 16px;
-  text-shadow: 1px 1px 0px var(--black);
+  text-shadow: 1px 1px 0px var(--pearl);
 }
 
 #scoreHint {
@@ -264,56 +273,140 @@ canvas.main-canvas {
   font-weight: bold;
 }
 
-.score-timeline-track {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
+/* Rhythm Track container */
+.rhythm-track-container {
+  display: flex;
+  position: relative;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0;
+  margin-top: 5px;
+}
+
+.rhythm-track-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: repeating-linear-gradient(90deg, var(--gold), var(--gold) 10px, transparent 10px, transparent 20px);
+  z-index: 0;
+  transform: translateY(-50%);
 }
 
 .score-segment {
-  background: var(--cream);
-  border: 2px dashed var(--cherry-red); /* Postage stamp look */
-  padding: 6px 8px;
+  position: relative;
+  z-index: 1;
+  background: var(--pearl);
+  border: 3px solid var(--black);
+  padding: 6px 12px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 4px;
   transition: all 0.25s ease;
-  box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+  box-shadow: 3px 3px 0 var(--royal-blue);
   color: var(--black);
+  border-radius: 12px;
+}
+
+.score-segment .segment-node {
+  width: 12px;
+  height: 12px;
+  background: var(--cherry-red);
+  border: 2px solid var(--black);
+  border-radius: 50%;
+  position: absolute;
+  top: -16px;
+  box-shadow: 0 0 5px var(--gold);
+}
+
+.segment-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
 .score-segment:hover {
   background: var(--gold);
-  transform: rotate(-1deg) scale(1.02);
+  transform: translateY(-5px);
 }
 
 .score-segment.is-active {
   background: var(--cherry-red);
   color: var(--pearl);
-  border: 2px solid var(--gold);
-  box-shadow: 4px 4px 0 var(--black);
-  transform: rotate(1deg) scale(1.05);
+  border: 3px solid var(--gold);
+  box-shadow: 5px 5px 0 var(--black);
+  transform: scale(1.1) rotate(1deg);
+  animation: rhythmBounce 0.4s ease-in-out infinite alternate;
+}
+
+.score-segment.is-active .segment-node {
+  background: var(--gold);
+  transform: scale(1.5);
 }
 
 .score-seg-key {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 900;
   font-family: 'Space Mono', monospace;
+  color: var(--royal-blue);
+  background: var(--cream);
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: 1px solid var(--black);
+  margin-bottom: 4px;
+}
+
+.score-segment.is-active .score-seg-key {
+  color: var(--cherry-red);
+  background: var(--gold);
 }
 
 .score-seg-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: bold;
-  font-family: 'Playfair Display', serif;
+  font-family: 'Permanent Marker', cursive;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .score-seg-time {
   font-size: 10px;
-  opacity: 0.8;
+  opacity: 0.9;
+  font-family: 'Space Mono', monospace;
+}
+
+/* Add rhythm keys legend styles */
+.rhythm-keys-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  background: var(--black);
+  color: var(--pearl);
+  padding: 6px 12px;
+  border: 2px dashed var(--hot-pink);
+  box-shadow: 2px 2px 0 var(--gold);
+  margin-bottom: 8px;
+  font-family: 'Space Mono', monospace;
+}
+
+.rhythm-keys-legend kbd {
+  background: var(--cream);
+  color: var(--black);
+  padding: 2px 6px;
+  border: 1px solid var(--cherry-red);
+  border-radius: 4px;
+  font-weight: bold;
+  box-shadow: 1px 1px 0 var(--cherry-red);
+}
+
+.rhythm-keys-legend strong {
+  color: var(--gold);
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
 }
 
 /* ============================================================

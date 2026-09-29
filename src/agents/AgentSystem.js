@@ -28,7 +28,6 @@ export class AgentSystem {
       cohesionWeight: 1.1,
       flowFieldWeight: 0.9,
       physarumWeight: 0.8,
-      mouseWeight: 0.0,
       perceptionRadius: 75,
       separationRadius: 30,
       maxSpeed: 4.2,
@@ -39,14 +38,18 @@ export class AgentSystem {
       quantizeSteps: 4 // Stepped scaling quantization levels
     };
 
-    // Target / Mouse interaction ("The Pinkette" conductor)
-    this.mouse = { x: width * 0.5, y: height * 0.5, active: false, mode: 'seek' };
+    // Shockwave system
+    this.shockwaves = [];
 
     // Beat Pulse / Stepped Scale state
     this.globalBeatPulse = 0;
     this.beatCounter = 0;
 
     this.initAgents();
+  }
+
+  addShockwave(x, y, power, color) {
+    this.shockwaves.push({x, y, power, radius: 0, maxRadius: 400, color, active: true});
   }
 
   initAgents() {
@@ -92,8 +95,8 @@ export class AgentSystem {
 
     // Swirl flow field briefly on beat
     this.flowField.triggerSwirl(
-      this.mouse.active ? this.mouse.x : this.width * 0.5,
-      this.mouse.active ? this.mouse.y : this.height * 0.5,
+      this.width * 0.5,
+      this.height * 0.5,
       intensity * 1.2
     );
 
@@ -173,6 +176,18 @@ export class AgentSystem {
       this.globalBeatPulse = 0;
     }
 
+    // 4b. Update Shockwaves
+    for (let i = 0; i < this.shockwaves.length; i++) {
+      let wave = this.shockwaves[i];
+      if (wave.active) {
+        wave.radius += 20 * delta;
+        if (wave.radius >= wave.maxRadius) {
+          wave.active = false;
+        }
+      }
+    }
+    this.shockwaves = this.shockwaves.filter(w => w.active);
+
     // 5. Update each autonomous agent
     const {
       separationWeight,
@@ -180,7 +195,6 @@ export class AgentSystem {
       cohesionWeight,
       flowFieldWeight,
       physarumWeight,
-      mouseWeight,
       perceptionRadius,
       separationRadius
     } = this.params;
@@ -204,19 +218,18 @@ export class AgentSystem {
         boid.physarumSense(trailData, this.width, this.height);
       }
 
-      // D) Mouse / Conductor interaction
-      let mouseFx = 0;
-      let mouseFy = 0;
-      if (this.mouse.active && mouseWeight > 0.01) {
-        if (this.mouse.mode === 'seek') {
-          const steer = boid.steerTowards(this.mouse.x, this.mouse.y);
-          mouseFx = steer.fx;
-          mouseFy = steer.fy;
-        } else {
-          // Flee
-          const steer = boid.steerTowards(this.mouse.x, this.mouse.y);
-          mouseFx = -steer.fx * 1.5;
-          mouseFy = -steer.fy * 1.5;
+      let shockwaveFx = 0;
+      let shockwaveFy = 0;
+      for (let j = 0; j < this.shockwaves.length; j++) {
+        const wave = this.shockwaves[j];
+        const dx = boid.x - wave.x;
+        const dy = boid.y - wave.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        
+        if (Math.abs(d - wave.radius) < 30 && d > 0) {
+          const force = wave.power * (1 - wave.radius / wave.maxRadius);
+          shockwaveFx += (dx / d) * force;
+          shockwaveFy += (dy / d) * force;
         }
       }
 
@@ -226,14 +239,14 @@ export class AgentSystem {
         ali.fx * alignmentWeight +
         coh.fx * cohesionWeight +
         flow.fx * flowFieldWeight +
-        mouseFx * mouseWeight;
+        shockwaveFx;
 
       const totalFy =
         sep.fy * separationWeight +
         ali.fy * alignmentWeight +
         coh.fy * cohesionWeight +
         flow.fy * flowFieldWeight +
-        mouseFy * mouseWeight;
+        shockwaveFy;
 
       boid.applyForce(totalFx, totalFy);
 
@@ -270,17 +283,23 @@ export class AgentSystem {
       this.agents[i].draw(ctx);
     }
 
-    // D) Render Mouse / Conductor touchpoint if active
-    if (this.mouse.active) {
-      ctx.save();
+    // D) Render shockwaves
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    for (let i = 0; i < this.shockwaves.length; i++) {
+      const wave = this.shockwaves[i];
+      const alpha = 1.0 - (wave.radius / wave.maxRadius);
       ctx.beginPath();
-      ctx.arc(this.mouse.x, this.mouse.y, 16 + this.globalBeatPulse * 12, 0, Math.PI * 2);
-      ctx.strokeStyle = this.mouse.mode === 'seek' ? 'rgba(255, 112, 166, 0.7)' : 'rgba(255, 0, 127, 0.9)';
-      ctx.lineWidth = 2;
+      ctx.arc(wave.x, wave.y, wave.radius, 0, Math.PI * 2);
+      
+      // Convert color to have alpha if needed, simpler is using globalAlpha
+      ctx.globalAlpha = Math.max(0, alpha);
+      ctx.strokeStyle = wave.color;
+      ctx.lineWidth = 4 + (alpha * 6);
       ctx.shadowBlur = 15;
-      ctx.shadowColor = '#FF007F';
+      ctx.shadowColor = wave.color;
       ctx.stroke();
-      ctx.restore();
     }
+    ctx.restore();
   }
 }

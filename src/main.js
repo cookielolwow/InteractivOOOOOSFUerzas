@@ -8,9 +8,11 @@ import { VisualScore } from './visualScore.js';
 import { AudioCompanion } from './audio/drumTrack.js';
 import { CamcorderUI } from './ui/camcorderUI.js';
 import { FancyBackground } from './background.js';
+import { StopMotionGirl } from './StopMotionGirl.js';
 
 class VisualInstrumentApp {
   constructor() {
+    this.camera = { scale: 1, baseScale: 1, shake: 0, angle: 0, targetAngle: 0 };
     this.appContainer = document.getElementById('app') || document.body;
     this.canvas = document.createElement('canvas');
     this.canvas.className = 'main-canvas';
@@ -36,6 +38,7 @@ class VisualInstrumentApp {
     
     // Initialize Fancy Background
     this.background = new FancyBackground(this.width, this.height);
+    this.girlAnim = new StopMotionGirl(this.width, this.height);
 
     this.lastTime = performance.now();
 
@@ -72,6 +75,7 @@ class VisualInstrumentApp {
       // [ESPACIO]: Escalado Rítmico (Beat Stutter Jump)
       if (e.code === 'Space') {
         e.preventDefault();
+        this.camera.scale = 1.08; this.camera.shake = 8;
         this.agentSystem.triggerBeat(1.0);
       }
 
@@ -135,36 +139,48 @@ class VisualInstrumentApp {
         this.visualScore.setSection(num - 1);
         this.agentSystem.triggerBeat(0.9);
       }
+
+      // Rhythm Game Keys
+      if (key === 'A') {
+        this.camera.scale = 1.15; this.camera.shake = 25; this.camera.targetAngle = 0.05; setTimeout(() => this.camera.targetAngle = 0, 150);
+        this.agentSystem.params.separationWeight = 4.0; 
+        setTimeout(() => this.agentSystem.params.separationWeight = 1.0, 200); 
+        this.agentSystem.triggerBeat(1.0); 
+        if(this.background) this.background.triggerBeatRing(this.width/2, this.height/2, '#CC0033');
+      }
+      if (key === 'S') {
+        this.camera.scale = 0.85; this.camera.shake = 15;
+        this.agentSystem.params.cohesionWeight = 3.0; 
+        setTimeout(() => this.agentSystem.params.cohesionWeight = 0.8, 200); 
+        this.agentSystem.triggerBeat(1.0); 
+        if(this.background) this.background.triggerBeatRing(this.width/2, this.height/2, '#2255AA');
+      }
+      if (key === 'D') {
+        this.camera.targetAngle = 0.2; this.camera.scale = 1.1; setTimeout(() => this.camera.targetAngle = 0, 300);
+        this.agentSystem.flowField.setMode('swirl'); 
+        this.agentSystem.flowField.triggerSwirl(this.width/2, this.height/2, 2.0); 
+        this.agentSystem.triggerBeat(1.0); 
+        if(this.background) this.background.triggerBeatRing(this.width/2, this.height/2, '#D4A853');
+      }
+      if (key === 'F') {
+        this.camera.scale = 1.1; this.camera.shake = 30;
+        this.agentSystem.trailBuffer.decayRate = 0.005; 
+        setTimeout(() => this.agentSystem.trailBuffer.decayRate = 0.07, 300); 
+        this.agentSystem.triggerBeat(1.0); 
+        if(this.background) this.background.triggerBeatRing(this.width/2, this.height/2, '#FF1493');
+      }
     });
-
-    // Mouse / Touch Interaction (Conductor & Beat Trigger)
-    const handlePointerMove = (e) => {
-      this.agentSystem.mouse.x = e.clientX;
-      this.agentSystem.mouse.y = e.clientY;
-      this.agentSystem.mouse.active = true;
-      this.agentSystem.params.mouseWeight = 1.2;
-    };
-
-    window.addEventListener('pointermove', handlePointerMove);
 
     window.addEventListener('pointerdown', (e) => {
       // If clicking directly on interactive UI buttons, do not trigger beat
       if (e.target.closest('button, input, label, .score-segment, .hud-lab-drawer')) return;
 
-      this.agentSystem.mouse.x = e.clientX;
-      this.agentSystem.mouse.y = e.clientY;
-      this.agentSystem.mouse.active = true;
-      this.agentSystem.mouse.mode = e.button === 2 ? 'flee' : 'seek';
-
-      // Tap on canvas triggers beat step
+      this.camera.scale = 1.05; this.camera.shake = 5;
+      this.agentSystem.addShockwave(e.clientX, e.clientY, 60, '#FF1493');
       this.agentSystem.triggerBeat(1.0);
       if (this.background) this.background.triggerBeatRing(e.clientX, e.clientY, '#CC0033');
     });
 
-    window.addEventListener('pointerup', () => {
-      this.agentSystem.params.mouseWeight = 0.0;
-      this.agentSystem.mouse.active = false;
-    });
 
     window.addEventListener('contextmenu', (e) => {
       // Prevent default right click menu so it can be used for flee steering
@@ -195,6 +211,20 @@ class VisualInstrumentApp {
       // 2. Update Autonomous Agent Swarm
       this.agentSystem.update(currentTime, deltaMs / 16.666);
 
+      // Update camera physics
+      this.camera.scale += (this.camera.baseScale - this.camera.scale) * 0.15;
+      this.camera.angle += (this.camera.targetAngle - this.camera.angle) * 0.15;
+      this.camera.shake *= 0.8;
+      const sx = (Math.random() - 0.5) * this.camera.shake;
+      const sy = (Math.random() - 0.5) * this.camera.shake;
+
+      this.ctx.save();
+      // Center transform
+      this.ctx.translate(this.width / 2 + sx, this.height / 2 + sy);
+      this.ctx.scale(this.camera.scale, this.camera.scale);
+      this.ctx.rotate(this.camera.angle);
+      this.ctx.translate(-this.width / 2, -this.height / 2);
+
       // 3. Clear Screen & Render Background
       this.ctx.clearRect(0, 0, this.width, this.height);
       if (this.background) {
@@ -205,8 +235,15 @@ class VisualInstrumentApp {
         this.ctx.fillRect(0, 0, this.width, this.height);
       }
 
+      if (this.girlAnim) {
+        this.girlAnim.update(currentTime, this.agentSystem.globalBeatPulse);
+        this.girlAnim.render(this.ctx, this.agentSystem.globalBeatPulse);
+      }
+
       // 4. Render Swarm, Trails & Field
       this.agentSystem.render(this.ctx);
+
+      this.ctx.restore();
 
       // 5. Update HUD elements
       this.ui.update(currentTime, deltaSec);

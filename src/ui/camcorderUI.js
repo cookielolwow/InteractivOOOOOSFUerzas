@@ -39,21 +39,25 @@ export class CamcorderUI {
         </header>
 
         <!-- Visual Score Timeline Navigator -->
-        <div class="hud-score-navigator">
+        <div class="hud-score-navigator score-container">
           <div class="score-meta">
-            <span class="score-label">★ VISUAL SCORE ★</span>
+            <span class="score-label">★ RHYTHM TRACK ★</span>
             <div class="score-current-info" id="scoreCurrentInfo">
               <strong id="scoreSectionName">INTRO: INTIMIDAD VOCAL</strong>
               <span id="scoreHint">Presiona [C] para Cohesión alta. Partículas unidas.</span>
             </div>
           </div>
 
-          <div class="score-timeline-track" id="scoreTimelineTrack">
+          <div class="score-timeline-track rhythm-track-container" id="scoreTimelineTrack">
+            <div class="rhythm-track-line"></div>
             ${SECTIONS.map((sec, idx) => `
               <div class="score-segment ${idx === 0 ? 'is-active' : ''}" data-index="${idx}">
-                <span class="score-seg-key">[${sec.key}]</span>
-                <span class="score-seg-title">${sec.name.split(':')[0]}</span>
-                <span class="score-seg-time">${sec.timeRange}</span>
+                <div class="segment-node"></div>
+                <div class="segment-info">
+                  <span class="score-seg-key">[${sec.key}]</span>
+                  <span class="score-seg-title">${sec.name.split(':')[0]}</span>
+                  <span class="score-seg-time">${sec.timeRange}</span>
+                </div>
               </div>
             `).join('')}
           </div>
@@ -75,6 +79,15 @@ export class CamcorderUI {
 
         <!-- Bottom Expressive Performance Dock -->
         <footer class="hud-bottom-dock">
+          <!-- Rhythm Keys Legend -->
+          <div class="rhythm-keys-legend">
+            <strong>RHYTHM KEYS:</strong>
+            <span><kbd>A</kbd> SCATTER</span>
+            <span><kbd>S</kbd> GATHER</span>
+            <span><kbd>D</kbd> SPIN</span>
+            <span><kbd>F</kbd> FLARE</span>
+          </div>
+
           <!-- Primary Expressive Triggers -->
           <div class="dock-triggers">
             <button class="trigger-btn beat-trigger" id="btnBeatTrigger">
@@ -83,23 +96,23 @@ export class CamcorderUI {
             </button>
 
             <button class="trigger-btn" id="btnCohesion" data-key="C">
-              <span class="key-badge">[C]</span>
+              <span class="key-badge">[S]</span>
               <span class="trigger-name">♫ GATHER (VOCAL)</span>
             </button>
 
             <button class="trigger-btn" id="btnSeparation" data-key="V">
-              <span class="key-badge">[V]</span>
+              <span class="key-badge">[A]</span>
               <span class="trigger-name">★ SCATTER (BREAK)</span>
             </button>
 
             <button class="trigger-btn" id="btnFlow" data-key="F">
-              <span class="key-badge">[F]</span>
-              <span class="trigger-name">♛ SWIRL (FLOW)</span>
+              <span class="key-badge">[D]</span>
+              <span class="trigger-name">♛ SPIN (FLOW)</span>
             </button>
 
             <button class="trigger-btn" id="btnTrails" data-key="T">
-              <span class="key-badge">[T]</span>
-              <span class="trigger-name">🍒 TRAILS (PHYSARUM)</span>
+              <span class="key-badge">[F]</span>
+              <span class="trigger-name">🍒 FLARE (PHYSARUM)</span>
             </button>
           </div>
 
@@ -349,7 +362,7 @@ export class CamcorderUI {
 
     // Rhythm Feedback
     if (this.prevPulse <= 0.1 && pulse > 0.5) {
-      const words = ['PERFECT!', 'GREAT!', 'fAnCy!', '♥♥♥', 'SLAY!', 'gIrL!'];
+      const words = ['PERFECT!', 'JUST!', 'GREAT!', 'MISS...', 'fAnCy!', 'gIrL!'];
       const word = words[Math.floor(Math.random() * words.length)];
       this.rhythmFeedback.textContent = word;
       this.rhythmFeedback.style.animation = 'none';
