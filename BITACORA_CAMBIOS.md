@@ -12,6 +12,10 @@
 
 ## Intención artística
 
+Elegí *Girl Like Me* porque me interesaba trabajar con el contraste entre la voz íntima de PinkPantheress y el pulso sincopado del 2-step. También quise partir del lenguaje visual de sus videos: una estética británica contemporánea, lúdica y construida mediante cortes, cambios de escala y gestos breves. Al ver esa energía, el video me recordó a *Rhythm Heaven*: la música parece organizar pequeñas acciones visuales, como si cada acento pudiera convertirse en una respuesta de juego.
+
+Tomé esa asociación como inspiración conceptual, no como una reproducción literal. En mi instrumento, el golpe rítmico produce un rebote escalonado; los recortes cambian de pose por pasos y los stickers dan una respuesta breve a la acción. Así, el sistema recoge la sensación de juego y montaje del referente, pero la combina con agentes autónomos que generan trayectorias propias. La interpretación no está animada de antemano: yo escucho, intervengo y respondo a lo que emerge.
+
 La pieza combina una voz íntima con una percusión 2-step sincopada. Interpreto ese contraste con un enjambre que puede acercarse, alinearse, abrirse en dispersión, seguir corrientes o reforzar caminos compartidos. La ciudad londinense, el tartán y las fotografías recortadas construyen un escenario editorial británico; no dictan el movimiento de los agentes.
 
 La composición no busca que cada partícula represente una nota. Los cuatro tipos de recorte sugieren capas musicales distintas y hacen legible la diversidad del grupo. El acento de cada momento surge de las reglas locales, las estelas acumuladas y mis decisiones como intérprete.
