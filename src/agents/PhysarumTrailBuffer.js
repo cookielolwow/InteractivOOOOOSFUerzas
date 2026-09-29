@@ -5,6 +5,8 @@ export class PhysarumTrailBuffer {
   constructor(width, height) {
     this.canvas = document.createElement('canvas');
     this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+    this.diffusionCanvas = document.createElement('canvas');
+    this.diffusionCtx = this.diffusionCanvas.getContext('2d');
     this.width = width;
     this.height = height;
 
@@ -23,6 +25,8 @@ export class PhysarumTrailBuffer {
     this.height = Math.max(10, height);
     this.canvas.width = this.width;
     this.canvas.height = this.height;
+    this.diffusionCanvas.width = this.width;
+    this.diffusionCanvas.height = this.height;
 
     // Initialize with dark dreamy background
     this.ctx.fillStyle = '#0B0410';
@@ -49,6 +53,20 @@ export class PhysarumTrailBuffer {
   diffuseAndDecay() {
     if (!this.active) return;
 
+    this.readCounter++;
+    // A light blur spreads the deposited chemical locally; every third frame
+    // keeps the visible trail and the agents' sampled field in agreement.
+    if (this.diffusion && this.readCounter % 3 === 0) {
+      this.diffusionCtx.clearRect(0, 0, this.width, this.height);
+      this.diffusionCtx.drawImage(this.canvas, 0, 0);
+      this.ctx.save();
+      this.ctx.clearRect(0, 0, this.width, this.height);
+      this.ctx.filter = 'blur(1.15px)';
+      this.ctx.drawImage(this.diffusionCanvas, 0, 0);
+      this.ctx.filter = 'none';
+      this.ctx.restore();
+    }
+
     // Evaporation (chemical decay)
     this.ctx.save();
     this.ctx.fillStyle = `rgba(11, 4, 16, ${this.decayRate})`;
@@ -56,7 +74,6 @@ export class PhysarumTrailBuffer {
     this.ctx.restore();
 
     // Cache image data every 3 frames for sensor reading (boosts FPS to 60+ effortlessly)
-    this.readCounter++;
     if (this.readCounter % 3 === 0) {
       try {
         this.cachedImageData = this.ctx.getImageData(0, 0, this.width, this.height).data;

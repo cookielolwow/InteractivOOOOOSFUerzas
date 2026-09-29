@@ -13,9 +13,25 @@ export class CamcorderUI {
     this.isLabOpen = false;
     this.isUiVisible = true;
     this.prevPulse = 0;
+    this.lyricPart = 0;
 
     this.buildDOM();
+    this.buildRhythmTitleCard();
     this.bindEvents();
+  }
+
+  buildRhythmTitleCard() {
+    this.rhythmTitleCard = document.createElement('div');
+    this.rhythmTitleCard.className = 'rhythm-title-card';
+    this.rhythmTitleCard.innerHTML = `
+      <div class="rhythm-title-sticker">
+        <span class="rhythm-title-small" id="rhythmTitleSmall">RHYTHM HEAVEN</span>
+        <strong id="rhythmTitleMain">ON BEAT!</strong>
+        <span class="rhythm-title-sub" id="rhythmTitleSub">KEEP IT TIGHT</span>
+      </div>`;
+    document.body.appendChild(this.rhythmTitleCard);
+    this.rhythmTitleMain = this.rhythmTitleCard.querySelector('#rhythmTitleMain');
+    this.rhythmTitleSub = this.rhythmTitleCard.querySelector('#rhythmTitleSub');
   }
 
   buildDOM() {
@@ -34,17 +50,18 @@ export class CamcorderUI {
             <span class="hud-timer" id="hudTimer">00:00</span>
             <button class="hud-btn" id="btnToggleLab" title="Panel de Percepción y Parámetros">⚙️ PARÁMETROS</button>
             <button class="hud-btn" id="btnFullscreen" title="Pantalla Completa (F11)">⛶ FULLSCREEN</button>
-            <button class="hud-btn" id="btnToggleUI" title="Ocultar Interfaz (M)">👁️ HUD</button>
+            <button class="hud-btn" id="btnLyrics" title="Mostrar u ocultar la letra (J)">♫ LETRA · J</button>
+            <button class="hud-btn" id="btnToggleUI" title="Ocultar o mostrar HUD (M / F2)">👁️ HUD · M / F2</button>
           </div>
         </header>
 
         <!-- Visual Score Timeline Navigator -->
         <div class="hud-score-navigator score-container">
           <div class="score-meta">
-            <span class="score-label">★ RHYTHM TRACK ★</span>
+            <span class="score-label">♫ RHYTHM HEAVEN · HUMAN CUE ♫</span>
             <div class="score-current-info" id="scoreCurrentInfo">
               <strong id="scoreSectionName">INTRO: INTIMIDAD VOCAL</strong>
-              <span id="scoreHint">Presiona [C] para Cohesión alta. Partículas unidas.</span>
+              <span id="scoreHint">Pulsa [J] para la letra proyectada; marca el acento con [S].</span>
             </div>
           </div>
 
@@ -75,43 +92,57 @@ export class CamcorderUI {
             </div>
           </div>
           <div class="rhythm-feedback" id="rhythmFeedback"></div>
+          <div class="rhythm-prompt"><span>HIT THE BEAT</span><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd><small>Q / SPACE · HIT</small></div>
         </div>
+
+        <aside class="lyric-study-card" id="lyricStudyCard" aria-live="polite">
+          <div class="lyric-card-label"><span>LETRA EN CAPAS</span><span>ESTUDIO 01 / 04</span></div>
+          <div class="lyric-phrase" aria-label="Fragmento breve de estudio de la letra">
+            <span data-lyric-part="0" class="is-current">WHY</span>
+            <span data-lyric-part="1">AREN'T YOU</span>
+            <span data-lyric-part="2">TIRED</span>
+            <span data-lyric-part="3">OF THE WAY YOU…</span>
+          </div>
+          <div class="lyric-study-note" id="lyricStudyNote">1 sílaba · plantea la pregunta</div>
+          <div class="lyric-study-footer"><kbd>H</kbd> RECORRER FRASE <span id="lyricStudyCount">1 / 4</span></div>
+        </aside>
 
         <!-- Bottom Expressive Performance Dock -->
         <footer class="hud-bottom-dock">
           <!-- Rhythm Keys Legend -->
           <div class="rhythm-keys-legend">
-            <strong>RHYTHM KEYS:</strong>
-            <span><kbd>A</kbd> SCATTER</span>
-            <span><kbd>S</kbd> GATHER</span>
-            <span><kbd>D</kbd> SPIN</span>
-            <span><kbd>F</kbd> FLARE</span>
+            <strong>TECLAS DE RITMO</strong>
+            <span><kbd>A</kbd> DISPERSAR</span>
+            <span><kbd>S</kbd> AGRUPAR</span>
+            <span><kbd>D</kbd> GIRAR</span>
+            <span><kbd>F</kbd> ESTELAS</span>
+            <span><kbd>B</kbd> CUE LETRA</span>
           </div>
 
           <!-- Primary Expressive Triggers -->
           <div class="dock-triggers">
             <button class="trigger-btn beat-trigger" id="btnBeatTrigger">
-              <span class="key-badge">ESPACIO / CLICK</span>
+              <span class="key-badge">Q / ESPACIO</span>
               <span class="trigger-name">♥ BEAT DROP</span>
             </button>
 
-            <button class="trigger-btn" id="btnCohesion" data-key="C">
+            <button class="trigger-btn" id="btnCohesion" data-key="S">
               <span class="key-badge">[S]</span>
               <span class="trigger-name">♫ GATHER (VOCAL)</span>
             </button>
 
-            <button class="trigger-btn" id="btnSeparation" data-key="V">
+            <button class="trigger-btn" id="btnSeparation" data-key="A">
               <span class="key-badge">[A]</span>
               <span class="trigger-name">★ SCATTER (BREAK)</span>
             </button>
 
-            <button class="trigger-btn" id="btnFlow" data-key="F">
+            <button class="trigger-btn" id="btnFlow" data-key="D">
               <span class="key-badge">[D]</span>
               <span class="trigger-name">♛ SPIN (FLOW)</span>
             </button>
 
-            <button class="trigger-btn" id="btnTrails" data-key="T">
-              <span class="key-badge">[F]</span>
+            <button class="trigger-btn" id="btnTrails" data-key="F">
+              <span class="key-badge">[F] / [T]</span>
               <span class="trigger-name">🍒 FLARE (PHYSARUM)</span>
             </button>
           </div>
@@ -132,6 +163,10 @@ export class CamcorderUI {
             <label class="audio-upload-btn" title="Cargar archivo de audio alternativo">
               <span>♛ LOAD AUDIO</span>
               <input type="file" id="fileAudioInput" accept="audio/*" style="display:none">
+            </label>
+            <label class="audio-upload-btn lyrics-upload-btn" title="Cargar letra sincronizada desde un archivo LRC local">
+              <span>♫ CARGAR LETRA .LRC</span>
+              <input type="file" id="fileLyricsInput" accept=".lrc,text/plain" style="display:none">
             </label>
           </div>
         </footer>
@@ -198,9 +233,16 @@ export class CamcorderUI {
     this.btnToggleDrum = this.container.querySelector('#btnToggleDrum');
     this.txtDrumState = this.container.querySelector('#txtDrumState');
     this.fileAudioInput = this.container.querySelector('#fileAudioInput');
+    this.fileLyricsInput = this.container.querySelector('#fileLyricsInput');
+    this.onLyricsFile = null;
     this.btnPlayCustomAudio = this.container.querySelector('#btnPlayCustomAudio');
     this.txtSongState = this.container.querySelector('#txtSongState');
     this.rhythmFeedback = this.container.querySelector('#rhythmFeedback');
+    this.rhythmPrompt = this.container.querySelector('.rhythm-prompt');
+    this.lyricStudyCard = this.container.querySelector('#lyricStudyCard');
+    this.lyricStudyNote = this.container.querySelector('#lyricStudyNote');
+    this.lyricStudyCount = this.container.querySelector('#lyricStudyCount');
+    this.lyricParts = this.container.querySelectorAll('[data-lyric-part]');
   }
 
   bindEvents() {
@@ -209,6 +251,7 @@ export class CamcorderUI {
     btnBeat.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       this.agentSystem.triggerBeat(1.0);
+      this.showRhythmHit('BEAT!');
     });
 
     // 2. Score segment click selection
@@ -222,10 +265,12 @@ export class CamcorderUI {
     // 3. Expressive Dock Buttons
     this.container.querySelector('#btnCohesion').addEventListener('click', () => {
       this.agentSystem.params.cohesionWeight = this.agentSystem.params.cohesionWeight > 1.8 ? 0.8 : 2.5;
+      this.showRhythmHit('GATHER!');
     });
 
     this.container.querySelector('#btnSeparation').addEventListener('click', () => {
       this.agentSystem.params.separationWeight = this.agentSystem.params.separationWeight > 2.2 ? 1.0 : 3.0;
+      this.showRhythmHit('SCATTER!');
     });
 
     this.container.querySelector('#btnFlow').addEventListener('click', () => {
@@ -234,10 +279,12 @@ export class CamcorderUI {
       const next = modes[(modes.indexOf(current) + 1) % modes.length];
       this.agentSystem.flowField.setMode(next);
       this.agentSystem.flowField.triggerSwirl(window.innerWidth * 0.5, window.innerHeight * 0.5, 1.4);
+      this.showRhythmHit('SPIN!');
     });
 
     this.container.querySelector('#btnTrails').addEventListener('click', () => {
       this.agentSystem.params.showTrails = !this.agentSystem.params.showTrails;
+      this.showRhythmHit(this.agentSystem.params.showTrails ? 'TRAIL ON' : 'TRAIL OFF');
     });
 
     // 4. Header buttons: Lab, Fullscreen, HUD Toggle
@@ -264,6 +311,10 @@ export class CamcorderUI {
       this.container.classList.toggle('hud-hidden', !this.isUiVisible);
     });
 
+    this.container.querySelector('#btnLyrics').addEventListener('click', () => {
+      this.onToggleLyrics?.();
+    });
+
     // 5. Audio Companion
     this.btnToggleDrum.addEventListener('click', () => {
       const playing = this.audioCompanion.toggleDrumTrack();
@@ -278,6 +329,12 @@ export class CamcorderUI {
         this.audioCompanion.loadAudioFile(file);
         this.txtSongState.textContent = '▶ PLAY AUDIO CARGADO';
       }
+    });
+
+    this.fileLyricsInput.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (file) this.onLyricsFile?.(file);
+      e.target.value = '';
     });
 
     this.btnPlayCustomAudio.addEventListener('click', () => {
@@ -360,15 +417,59 @@ export class CamcorderUI {
       step.classList.toggle('is-lit', idx < activeLevel);
     });
 
-    // Rhythm Feedback
-    if (this.prevPulse <= 0.1 && pulse > 0.5) {
-      const words = ['PERFECT!', 'JUST!', 'GREAT!', 'MISS...', 'fAnCy!', 'gIrL!'];
-      const word = words[Math.floor(Math.random() * words.length)];
-      this.rhythmFeedback.textContent = word;
-      this.rhythmFeedback.style.animation = 'none';
-      void this.rhythmFeedback.offsetWidth; // trigger reflow
-      this.rhythmFeedback.style.animation = 'popIn 0.8s ease-out forwards';
-    }
     this.prevPulse = pulse;
+  }
+
+  showRhythmHit(label) {
+    this.rhythmFeedback.textContent = label;
+    this.rhythmFeedback.style.animation = 'none';
+    void this.rhythmFeedback.offsetWidth;
+    this.rhythmFeedback.style.animation = 'popIn 0.65s ease-out forwards';
+    this.rhythmPrompt.classList.add('is-hit');
+    clearTimeout(this.rhythmPromptTimer);
+    this.rhythmPromptTimer = setTimeout(() => this.rhythmPrompt.classList.remove('is-hit'), 220);
+    this.showRhythmTitle(label);
+  }
+
+  showRhythmTitle(label) {
+    const titles = {
+      'BEAT!': ['ON BEAT!', 'KEEP IT TIGHT', 'gold'],
+      'SCATTER!': ['BREAK OUT!', 'PUSH THE SPACE', 'red'],
+      'GATHER!': ['CLOSE IN!', 'MOVE AS ONE', 'blue'],
+      'SPIN!': ['TURN IT!', 'FOLLOW THE FLOW', 'pink'],
+      'TRAIL ON': ['TRAIL ON!', 'LEAVE A TRACE', 'green'],
+      'TRAIL OFF': ['TRAIL CUT!', 'CLEAR THE AIR', 'cream'],
+      'CLOSE IN!': ['CLOSE IN!', 'VOCAL MODE', 'blue'],
+      'BREAK OUT!': ['BREAK OUT!', 'BREAKBEAT MODE', 'red'],
+      'LYRIC CUE': ['LYRIC!', 'NEXT WORD', 'pink'],
+      'AUTO LYRICS': ['AUTO', 'FOLLOWING CLOCK', 'blue']
+    };
+    const [title, sub, tone] = titles[label] || [label.replace(/!/g, ''), 'RHYTHM CUE', 'gold'];
+    this.rhythmTitleMain.textContent = title;
+    this.rhythmTitleSub.textContent = sub;
+    const placements = [[12, 18], [82, 20], [15, 73], [80, 70], [47, 16], [52, 78]];
+    const [x, y] = placements[Math.floor(Math.random() * placements.length)];
+    this.rhythmTitleCard.style.setProperty('--title-x', `${x}vw`);
+    this.rhythmTitleCard.style.setProperty('--title-y', `${y}vh`);
+    this.rhythmTitleCard.dataset.tone = tone;
+    this.rhythmTitleCard.classList.remove('is-playing');
+    void this.rhythmTitleCard.offsetWidth;
+    this.rhythmTitleCard.classList.add('is-playing');
+  }
+
+  advanceLyricStudy() {
+    const notes = [
+      '1 sílaba · plantea la pregunta',
+      '2 sílabas · recoge el contratiempo',
+      '1 sílaba · acento y sostén',
+      '4 sílabas · suelta la frase'
+    ];
+    this.lyricPart = (this.lyricPart + 1) % this.lyricParts.length;
+    this.lyricParts.forEach((part, index) => part.classList.toggle('is-current', index === this.lyricPart));
+    this.lyricStudyNote.textContent = notes[this.lyricPart];
+    this.lyricStudyCount.textContent = `${this.lyricPart + 1} / ${this.lyricParts.length}`;
+    this.lyricStudyCard.classList.remove('is-stepping');
+    void this.lyricStudyCard.offsetWidth;
+    this.lyricStudyCard.classList.add('is-stepping');
   }
 }

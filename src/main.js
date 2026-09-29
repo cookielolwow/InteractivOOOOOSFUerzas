@@ -8,7 +8,9 @@ import { VisualScore } from './visualScore.js';
 import { AudioCompanion } from './audio/drumTrack.js';
 import { CamcorderUI } from './ui/camcorderUI.js';
 import { FancyBackground } from './background.js';
-import { StopMotionGirl } from './StopMotionGirl.js';
+import { parseLrc } from './lyrics/parseLrc.js';
+import { LyricsOverlay } from './ui/lyricsOverlay.js';
+import defaultLyricsSource from './lyrics/girl-like-me.lrc?raw';
 
 class VisualInstrumentApp {
   constructor() {
@@ -35,10 +37,21 @@ class VisualInstrumentApp {
 
     // Initialize Camcorder HUD UI
     this.ui = new CamcorderUI(this.agentSystem, this.visualScore, this.audioCompanion);
+    this.lyricsOverlay = new LyricsOverlay(this.ui.container);
+    this.lyricsOverlay.load(parseLrc(defaultLyricsSource), 'Girl Like Me · letra');
+    this.ui.lyricStudyCard.classList.add('is-replaced');
+    this.ui.onLyricsFile = async (file) => {
+      try {
+        const cues = parseLrc(await file.text());
+        this.lyricsOverlay.load(cues, file.name);
+      } catch {
+        this.lyricsOverlay.showMessage('No pude leer ese archivo. Prueba con una letra .LRC en texto plano.', true);
+      }
+    };
+    this.ui.onToggleLyrics = () => this.lyricsOverlay.toggle();
     
     // Initialize Fancy Background
     this.background = new FancyBackground(this.width, this.height);
-    this.girlAnim = new StopMotionGirl(this.width, this.height);
 
     this.lastTime = performance.now();
 
@@ -65,44 +78,52 @@ class VisualInstrumentApp {
   bindEvents() {
     window.addEventListener('resize', () => this.initCanvas());
 
-    // Keyboard Shortcuts for Live Expressive Performance
+    // Keyboard is the primary performance surface; holding a key never repeats hits.
     window.addEventListener('keydown', (e) => {
-      // Ignore if typing inside input/textarea
-      if (e.target.matches('input, textarea')) return;
+      if (e.target.matches('input, textarea, select')) return;
+      if (e.repeat) return;
 
       const key = e.key.toUpperCase();
 
-      // [ESPACIO]: Escalado Rítmico (Beat Stutter Jump)
-      if (e.code === 'Space') {
+      // [Q] / [ESPACIO]: manual beat hit, centered so the pointer has no influence.
+      if (e.code === 'Space' || key === 'Q') {
         e.preventDefault();
         this.camera.scale = 1.08; this.camera.shake = 8;
         this.agentSystem.triggerBeat(1.0);
+        this.background.triggerBeatRing(this.width / 2, this.height / 2, '#fff1b8');
+        this.ui.showRhythmHit('BEAT!');
       }
 
       // [C]: Cohesión / Intimidad Vocal
       if (key === 'C') {
         this.agentSystem.params.cohesionWeight = this.agentSystem.params.cohesionWeight > 1.8 ? 0.8 : 2.5;
         this.agentSystem.triggerBeat(0.6);
+        this.background.triggerBeatRing(this.width / 2, this.height / 2, '#72cbd0');
+        this.ui.showRhythmHit('CLOSE IN!');
       }
 
       // [V]: Separación / Breakbeat Drop
       if (key === 'V') {
         this.agentSystem.params.separationWeight = this.agentSystem.params.separationWeight > 2.2 ? 1.0 : 3.0;
         this.agentSystem.triggerBeat(0.8);
+        this.background.triggerBeatRing(this.width / 2, this.height / 2, '#e04755');
+        this.ui.showRhythmHit('BREAK OUT!');
       }
 
-      // [F]: Flow Field Swirl / Mode
+      // [F]: Toggle Physarum trails; [D] cycles the flow-field modes.
       if (key === 'F') {
-        const modes = ['stream', 'swirl', 'waves'];
-        const current = this.agentSystem.flowField.mode;
-        const next = modes[(modes.indexOf(current) + 1) % modes.length];
-        this.agentSystem.flowField.setMode(next);
-        this.agentSystem.flowField.triggerSwirl(this.width * 0.5, this.height * 0.5, 1.4);
+        this.agentSystem.params.showTrails = !this.agentSystem.params.showTrails;
+        this.agentSystem.triggerBeat(0.7);
+        this.background.triggerBeatRing(this.width / 2, this.height / 2, this.agentSystem.params.showTrails ? '#a8d9c2' : '#fff1b8');
+        this.ui.showRhythmHit(this.agentSystem.params.showTrails ? 'TRAIL ON' : 'TRAIL OFF');
       }
 
-      // [T]: Physarum Dream Trails
+      // [T]: Alternate shortcut for the Physarum trails.
       if (key === 'T') {
         this.agentSystem.params.showTrails = !this.agentSystem.params.showTrails;
+        this.agentSystem.triggerBeat(0.7);
+        this.background.triggerBeatRing(this.width / 2, this.height / 2, this.agentSystem.params.showTrails ? '#a8d9c2' : '#fff1b8');
+        this.ui.showRhythmHit(this.agentSystem.params.showTrails ? 'TRAIL ON' : 'TRAIL OFF');
       }
 
       // [L]: Toggle Song Playback ("Girl Like Me")
@@ -127,10 +148,26 @@ class VisualInstrumentApp {
         this.agentSystem.trailBuffer.clear();
       }
 
+      // [H]: Study the short hook fragment as syllables and rhythmic pickups.
+      if (key === 'H') this.ui.advanceLyricStudy();
+
       // [M]: Toggle HUD Visibility
-      if (key === 'M') {
+      if (key === 'M' || e.code === 'F2') {
         this.ui.isUiVisible = !this.ui.isUiVisible;
         this.ui.container.classList.toggle('hud-hidden', !this.ui.isUiVisible);
+      }
+
+      // [J]: show/hide the timestamped karaoke projection.
+      if (key === 'J') this.lyricsOverlay.toggle();
+
+      // [B]: performer advances one lyric cube; [N] returns to clock-following mode.
+      if (key === 'B') {
+        this.lyricsOverlay.advanceManualCue(songTime ?? this.visualScore.currentTime);
+        this.ui.showRhythmHit('LYRIC CUE');
+      }
+      if (key === 'N') {
+        this.lyricsOverlay.setAutomaticMode();
+        this.ui.showRhythmHit('AUTO LYRICS');
       }
 
       // [1 - 6]: Score Sections
@@ -138,15 +175,18 @@ class VisualInstrumentApp {
       if (num >= 1 && num <= 6) {
         this.visualScore.setSection(num - 1);
         this.agentSystem.triggerBeat(0.9);
+        this.background.triggerBeatRing(this.width / 2, this.height / 2, '#ffd36f');
+        this.ui.showRhythmHit(`SECTION ${num}`);
       }
 
-      // Rhythm Game Keys
+      // Four rhythm actions shown on screen: scatter, gather, spin, trail flare.
       if (key === 'A') {
         this.camera.scale = 1.15; this.camera.shake = 25; this.camera.targetAngle = 0.05; setTimeout(() => this.camera.targetAngle = 0, 150);
         this.agentSystem.params.separationWeight = 4.0; 
         setTimeout(() => this.agentSystem.params.separationWeight = 1.0, 200); 
         this.agentSystem.triggerBeat(1.0); 
         if(this.background) this.background.triggerBeatRing(this.width/2, this.height/2, '#CC0033');
+        this.ui.showRhythmHit('SCATTER!');
       }
       if (key === 'S') {
         this.camera.scale = 0.85; this.camera.shake = 15;
@@ -154,40 +194,26 @@ class VisualInstrumentApp {
         setTimeout(() => this.agentSystem.params.cohesionWeight = 0.8, 200); 
         this.agentSystem.triggerBeat(1.0); 
         if(this.background) this.background.triggerBeatRing(this.width/2, this.height/2, '#2255AA');
+        this.ui.showRhythmHit('GATHER!');
       }
       if (key === 'D') {
         this.camera.targetAngle = 0.2; this.camera.scale = 1.1; setTimeout(() => this.camera.targetAngle = 0, 300);
-        this.agentSystem.flowField.setMode('swirl'); 
-        this.agentSystem.flowField.triggerSwirl(this.width/2, this.height/2, 2.0); 
+        const modes = ['stream', 'swirl', 'waves'];
+        const current = this.agentSystem.flowField.mode;
+        this.agentSystem.flowField.setMode(modes[(modes.indexOf(current) + 1) % modes.length]);
+        this.agentSystem.flowField.triggerSwirl(this.width/2, this.height/2, 2.0);
         this.agentSystem.triggerBeat(1.0); 
         if(this.background) this.background.triggerBeatRing(this.width/2, this.height/2, '#D4A853');
+        this.ui.showRhythmHit('SPIN!');
       }
-      if (key === 'F') {
-        this.camera.scale = 1.1; this.camera.shake = 30;
-        this.agentSystem.trailBuffer.decayRate = 0.005; 
-        setTimeout(() => this.agentSystem.trailBuffer.decayRate = 0.07, 300); 
-        this.agentSystem.triggerBeat(1.0); 
-        if(this.background) this.background.triggerBeatRing(this.width/2, this.height/2, '#FF1493');
-      }
+      if (key === 'F') this.camera.shake = 8;
     });
 
-    window.addEventListener('pointerdown', (e) => {
-      // If clicking directly on interactive UI buttons, do not trigger beat
-      if (e.target.closest('button, input, label, .score-segment, .hud-lab-drawer')) return;
-
-      this.camera.scale = 1.05; this.camera.shake = 5;
-      this.agentSystem.addShockwave(e.clientX, e.clientY, 60, '#FF1493');
-      this.agentSystem.triggerBeat(1.0);
-      if (this.background) this.background.triggerBeatRing(e.clientX, e.clientY, '#CC0033');
-    });
-
-
-    window.addEventListener('contextmenu', (e) => {
-      // Prevent default right click menu so it can be used for flee steering
-      if (!e.target.closest('.hud-lab-drawer')) {
-        e.preventDefault();
-      }
-    });
+    const updateScoreUI = this.visualScore.onSectionChange;
+    this.visualScore.onSectionChange = (section) => {
+      if (updateScoreUI) updateScoreUI(section);
+      this.background.setSection(section.id);
+    };
   }
 
   startLoop() {
@@ -198,18 +224,17 @@ class VisualInstrumentApp {
 
       // 1. Advance Visual Score Time (synced to song if playing)
       const songTime = this.audioCompanion.getSongTime();
+      const drumTime = this.audioCompanion.getDrumTime();
+      const musicTime = songTime ?? drumTime;
       if (songTime !== null) {
         this.visualScore.currentTime = songTime;
-        const currentSec = this.visualScore.getCurrentSection();
-        if (songTime >= currentSec.endTime && this.visualScore.currentSectionIndex < 5) {
-          this.visualScore.setSection(this.visualScore.currentSectionIndex + 1);
-        }
       } else {
         this.visualScore.updateTime(deltaSec);
       }
 
       // 2. Update Autonomous Agent Swarm
       this.agentSystem.update(currentTime, deltaMs / 16.666);
+      this.lyricsOverlay.update(songTime ?? this.visualScore.currentTime);
 
       // Update camera physics
       this.camera.scale += (this.camera.baseScale - this.camera.scale) * 0.15;
@@ -228,16 +253,11 @@ class VisualInstrumentApp {
       // 3. Clear Screen & Render Background
       this.ctx.clearRect(0, 0, this.width, this.height);
       if (this.background) {
-        this.background.update(currentTime, this.agentSystem.globalBeatPulse);
+        this.background.update(currentTime, this.agentSystem.globalBeatPulse, musicTime, this.audioCompanion.bpm);
         this.background.render(this.ctx);
       } else {
         this.ctx.fillStyle = '#0A0310';
         this.ctx.fillRect(0, 0, this.width, this.height);
-      }
-
-      if (this.girlAnim) {
-        this.girlAnim.update(currentTime, this.agentSystem.globalBeatPulse);
-        this.girlAnim.render(this.ctx, this.agentSystem.globalBeatPulse);
       }
 
       // 4. Render Swarm, Trails & Field

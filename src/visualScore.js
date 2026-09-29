@@ -11,7 +11,7 @@ export const SECTIONS = [
     endTime: 18,
     musicalPassage: 'Voz susurrada solitaria, acordes lo-fi nostálgicos.',
     visualIntention: 'Cúmulo íntimo central, reposo y melancolía.',
-    actionHint: 'Presiona [C] para Cohesión alta. Partículas unidas y estelas suaves.',
+    actionHint: 'Pulsa [J] para la letra proyectada; marca el acento con [S].',
     recommendedPreset: {
       separationWeight: 0.6,
       alignmentWeight: 0.4,
@@ -31,7 +31,7 @@ export const SECTIONS = [
     endTime: 45,
     musicalPassage: 'Aparece el breakbeat 2-step sincopado a 138 BPM.',
     visualIntention: 'Activación del ritmo cadencioso y corrientes de aire.',
-    actionHint: 'Golpea [ESPACIO] al ritmo de la caja para el Escalado Rítmico cuantizado.',
+    actionHint: 'Golpea [Q] o [ESPACIO] al ritmo de la caja para marcar el pulso.',
     recommendedPreset: {
       separationWeight: 1.4,
       alignmentWeight: 1.2,
@@ -51,7 +51,7 @@ export const SECTIONS = [
     endTime: 72,
     musicalPassage: 'Estribillo eufórico, percusión brillante y voces en eco.',
     visualIntention: 'Explosión de partículas, destellos neón y dispersión rápida.',
-    actionHint: 'Activa [V] para Separación máxima y [T] para estelas fluorescentes.',
+    actionHint: 'Golpea [A] para DISPERSAR; pulsa [F] para encender las estelas.',
     recommendedPreset: {
       separationWeight: 2.8,
       alignmentWeight: 0.8,
@@ -71,7 +71,7 @@ export const SECTIONS = [
     endTime: 100,
     musicalPassage: 'Filtro pasa-bajos, juego rítmico sincopado y cortes secos.',
     visualIntention: 'Vórtices magnéticos y trayectorias sinuosas orgánicas.',
-    actionHint: 'Mueve el cursor o presiona [F] para activar el vórtice de flujo.',
+    actionHint: 'Pulsa [D] para cambiar el campo: corriente, vórtice y ondas.',
     recommendedPreset: {
       separationWeight: 1.2,
       alignmentWeight: 1.5,
@@ -91,7 +91,7 @@ export const SECTIONS = [
     endTime: 125,
     musicalPassage: 'Doble energía rítmica, bajo saturado, coro final.',
     visualIntention: 'Fusión elástica: contracción y expansión enérgica.',
-    actionHint: 'Alterna [C] y [V] en contratiempo con saltos continuos de [ESPACIO].',
+    actionHint: 'Alterna [S] y [A] en contratiempo; marca los acentos con [Q].',
     recommendedPreset: {
       separationWeight: 2.4,
       alignmentWeight: 1.6,
@@ -163,13 +163,7 @@ export class VisualScore {
 
   updateTime(deltaSeconds) {
     if (!this.isPlaying) return;
-
+    // The clock may follow the audio, but only the performer changes sections.
     this.currentTime += deltaSeconds;
-    const sec = this.getCurrentSection();
-
-    // Check if we advanced to next section
-    if (this.currentTime >= sec.endTime && this.currentSectionIndex < SECTIONS.length - 1) {
-      this.setSection(this.currentSectionIndex + 1);
-    }
   }
 }

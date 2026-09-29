@@ -35,7 +35,9 @@ Ningún agente posee una visión global del espacio ni acata órdenes de un líd
 ### B. Cálculo de Acción y Leyes de Steering
 Cada agente calcula su fuerza resultante sumando las intenciones locales, ponderadas por los controles expresivos del intérprete:
 
-$$\vec{F}_{\text{total}} = w_{sep}\vec{F}_{sep} + w_{ali}\vec{F}_{ali} + w_{coh}\vec{F}_{coh} + w_{flow}\vec{F}_{flow} + w_{mouse}\vec{F}_{mouse}$$
+$$\vec{F}_{\text{total}} = w_{sep}\vec{F}_{sep} + w_{ali}\vec{F}_{ali} + w_{coh}\vec{F}_{coh} + w_{flow}\vec{F}_{flow} + \vec{F}_{beat}$$
+
+La fuerza de beat aparece solo cuando la persona marca un golpe con el teclado. No hay una fuerza de cursor ni un objetivo que persiga el puntero. Physarum orienta el rumbo al consultar la concentración local de estelas.
 
 1. **Separación (Reynolds)**:
    $$\vec{F}_{sep} = \sum_{j \neq i, d < r_{sep}} \frac{\vec{p}_i - \vec{p}_j}{|\vec{p}_i - \vec{p}_j|^2}$$
@@ -55,25 +57,28 @@ $$\vec{F}_{\text{total}} = w_{sep}\vec{F}_{sep} + w_{ali}\vec{F}_{ali} + w_{coh}
 
 | Sección | Tiempo | Pasaje Musical ("Girl Like Me") | Intención Visual | Intervención en Vivo |
 | :--- | :--- | :--- | :--- | :--- |
-| **1. INTRO** | 0:00 - 0:18 | Voz lo-fi solitaria, acordes nostálgicos | Nebulosa íntima, calma, melancolía | Pulsar `[C]` (Cohesión alta). Partículas agrupadas en el centro con estelas suaves. |
-| **2. VERSO 1** | 0:18 - 0:45 | Entra la base 2-step a 138 BPM | Despertar del ritmo y corrientes de aire | Golpear `[ESPACIO]` al compás de la caja para el **Escalado Rítmico cuantizado**. `[F]` para corriente fluida. |
-| **3. CORO 1** | 0:45 - 1:12 | Clímax vocal eufórico, percusión brillante | Explosión expansiva de destellos neón | Presionar `[V]` para Separación máxima y `[T]` para estelas de luz fluorescente. |
-| **4. PUENTE** | 1:12 - 1:40 | Filtro pasa-bajos, juego rítmico sincopado | Vórtices magnéticos (*The Pinkette*) | Mover el cursor para conducir las partículas en espirales vivas. |
-| **5. CORO 2** | 1:40 - 2:05 | Doble energía, bajo garage saturado | Fusión elástica: contracción y expansión | Alternar `[C]` y `[V]` en contratiempo con ráfagas continuas de `[ESPACIO]`. |
-| **6. OUTRO** | 2:05 - 2:25 | Desvanecimiento de la voz (*"...like me"*) | Disolución lenta y quietud Y2K | Desacelerar, soltar controles y permitir que las estelas se evaporen en el vacío púrpura. |
+| **1. INTRO** | 0:00 - 0:18 | Voz lo-fi solitaria, acordes nostálgicos | Recorte de papel íntimo y reposo | Pulsar `[S]` para agrupar. `[H]` recorre el fragmento didáctico por sílabas. |
+| **2. VERSO 1** | 0:18 - 0:45 | Entra la base 2-step a 138 BPM | Taxi recortado, ciudad y golpes de cámara | Marcar la caja con `[Q]` o `[ESPACIO]`; pulsar `[D]` para cambiar el campo. |
+| **3. CORO 1** | 0:45 - 1:12 | Clímax vocal eufórico, percusión brillante | Remolino fucsia y dispersión | Presionar `[A]` para dispersar y `[F]` para estelas Physarum. |
+| **4. PUENTE** | 1:12 - 1:40 | Filtro pasa-bajos, juego rítmico sincopado | Puente, letreros y recortes urbanos | Pulsar `[D]` y escuchar cómo cambian las trayectorias del campo. |
+| **5. CORO 2** | 1:40 - 2:05 | Doble energía, bajo garage saturado | Escenario de miniaturas y color contrastado | Alternar `[S]` y `[A]` en contratiempo; marcar acentos con `[Q]`. |
+| **6. OUTRO** | 2:05 - 2:25 | Desvanecimiento de la voz | Taxi y ciudad en disolución de papel | Bajar la intensidad manualmente y dejar que las estelas se evaporen. |
+
+Las teclas `[1]` a `[6]` cambian manualmente de sección. El reloj puede seguir el audio, pero ni el score ni la paleta saltan de sección por sí solos: escucho la música y decido cuándo intervenir.
 
 ---
 
 ## 4. Controles del Instrumento
 
-- <kbd>ESPACIO</kbd> / <kbd>Clic en lienzo</kbd>: **Escalado Rítmico Cuantizado (Beat Stutter)** en 4 escalones.
+- <kbd>Q</kbd> / <kbd>ESPACIO</kbd>: **Golpe rítmico** con un pulso de cámara centrado.
+- <kbd>A</kbd> / <kbd>S</kbd> / <kbd>D</kbd> / <kbd>F</kbd>: **Dispersar / agrupar / cambiar Flow Field / estelas**.
+- <kbd>H</kbd>: Avanza entre las cuatro unidades silábicas del fragmento didáctico; indica conteo, acento y fraseo.
 - <kbd>L</kbd> / Botón `PLAY`: **Reproduce / Pausa la canción oficial "Girl Like Me"** (cargada desde `src/sonido/`).
 - <kbd>C</kbd>: **Cohesión Vocal** (conecta y comprime el enjambre hacia la voz).
 - <kbd>V</kbd>: **Separación Breakbeat** (explosión centrífuga de partículas en los drops).
-- <kbd>F</kbd>: **Flow Field Swirl** (activa torbellinos y corrientes de flujo).
-- <kbd>T</kbd>: **Estelas Physarum** (activa/desactiva el rastro químico bioluminiscente).
-- <kbd>1</kbd> a <kbd>6</kbd>: Salto directo a las secciones de la Partitura Visual (sincroniza automáticamente la posición de la canción).
-- <kbd>Cursor / Touch</kbd>: Punto de atracción magnética (*The Pinkette*).
+- <kbd>C</kbd> / <kbd>V</kbd>: Atajos alternos para cambiar cohesión y separación.
+- <kbd>T</kbd>: Atajo alterno para encender y apagar estelas Physarum.
+- <kbd>1</kbd> a <kbd>6</kbd>: Selección manual de la sección de la Partitura Visual.
 - <kbd>P</kbd>: Activa/desactiva la base metrónomo 2-step sintética (138 BPM).
 - <kbd>M</kbd>: Oculta/muestra la interfaz visual (Modo Performance pura).
 - <kbd>F11</kbd> / Botón UI: Pantalla Completa.
@@ -105,3 +110,33 @@ $$\vec{F}_{\text{total}} = w_{sep}\vec{F}_{sep} + w_{ali}\vec{F}_{ali} + w_{coh}
 - **Evidencia**: Se descartó conscientemente cualquier automatismo por FFT o micrófono. El instrumento depende de la escucha atenta y las decisiones en vivo del ejecutante.
 - El **Score Visual** y los controles expresivos permiten conducir la pieza en vivo, anticipar los pasajes musicales y reaccionar elásticamente a los patrones emergentes del colectivo.
 - Se dispone de una interfaz con HUD retro de videocámara que guía al ejecutante en cada sección y permite ocultar todos los elementos visuales con la tecla `M` para una presentación limpia en escena.
+
+### Actualización de referencias visuales y guía de letra
+- Los videos se usan como referentes de lenguaje visual: montaje de collage, palabras de alto contraste, taxis y buses londinenses, bloques geométricos y pequeñas escenas enmarcadas. El instrumento reconstruye estos recursos con dibujo propio; no incorpora los videos.
+- Una tarjeta de estudio divide un fragmento breve en cuatro partes y permite avanzar manualmente con `[H]`. Es una ayuda de escucha y acentuación, no una transcripción completa ni una secuencia automática.
+- La bailarina de papel cambia de pose cuando la persona pulsa una tecla rítmica. La paleta cambia cuando quien interpreta selecciona otra sección.
+- Esta revisión refuerza el requisito de interpretación humana: el audio no analiza ni dispara las decisiones visuales y el score no cambia de sección automáticamente.
+
+### Revisión de proyección, partículas y sincronía de escena (29 de septiembre de 2026)
+
+- Se añadió una capa de lyric video que lee un archivo `.LRC` elegido por quien interpreta. Cada marca de tiempo selecciona la línea activa y la capa revela las palabras progresivamente hasta la siguiente marca. La letra no se descarga ni viene incluida; el reloj de reproducción sincroniza el texto.
+- La tecla `[J]` controla la capa de letra y `[M]` / `[F2]` ocultan o muestran los controles del HUD. La proyección de la letra se mantiene independiente del HUD para poder limpiar la pantalla durante la presentación.
+- El paisaje usa el reloj de reproducción y el BPM para desplazar la ciudad y dar acentos de color por compás, con pequeños rebotes de casas, taxi, bus, puente y cabina telefónica. El color de la escena se anima automáticamente; el cambio de sección y los parámetros de los agentes siguen siendo decisiones manuales.
+- Los cuatro tipos de agentes ahora tienen formas legibles asociadas a voz, bajo, caja y hi-hat. Separación, alineación y cohesión siguen actuando sobre vecindades locales; el agente toma muestras del flow field y de la concentración química Physarum.
+- Se incorporó difusión espacial real al búfer de estelas y el peso de Physarum modula cuánto gira el agente hacia las señales químicas. Así, encender el rastro afecta tanto la composición como la percepción local.
+- La bailarina conserva la estética de recortes, alterna poses con el pulso y ya no muestra un rótulo de personaje.
+- Para ensayar: cargar la canción, cargar su `.LRC`, ocultar el HUD con `[M]` / `[F2]` y mostrar la letra con `[J]`. En el ensayo, comprobar la alineación de los primeros versos; algunos LRC requieren un pequeño ajuste de offset según la edición del audio.
+
+### Golpe performativo y legibilidad del movimiento
+
+- Las teclas de interpretación producen ahora una tarjeta de título de corta duración: `ON BEAT!`, `BREAK OUT!`, `CLOSE IN!`, `TURN IT!` o `TRAIL ON/OFF`. Son señales visuales originales para la ejecución; cada una traduce la intención de la acción sin fijar una trayectoria para los agentes.
+- Cada golpe suma un impulso hacia la izquierda al fondo. Las capas lejanas, cercanas y los vehículos recorren distancias diferentes, por lo que el paisaje conserva paralaje. Las casas, puente, taxi, bus y cabina hacen un rebote corto con compresión vertical y expansión horizontal.
+- Se reemplazó el salto de escala inestable de los agentes por un resorte amortiguado: impacto ancho y bajo, estiramiento en la dirección del movimiento y retorno a la forma base. El desplazamiento continúa calculándose a partir de vecinos, flow field y sensores Physarum; el gesto visual no prescribe su recorrido.
+
+### Rediseño como visual de concierto
+
+- La capa de letra ya no usa un panel central. Cada línea entra como una serie de recortes tipográficos situados en distintos planos de la pantalla; las palabras se revelan durante la duración de su marca `.LRC` y luego cambian de posición en la línea siguiente.
+- Se retiró del render el escenario de la bailarina para liberar la composición. El fondo incorpora haces de luz, bloom dibujado en canvas y una audiencia de siluetas para leer el sistema como proyección de concierto.
+- El color de la escenografía se interpola continuamente entre cuatro tintes durante cada bloque de ocho pulsos. No cambia el score: las secciones y las reglas de los agentes continúan bajo conducción humana.
+- Se reajustó la letra al audio local de 2:24 y a los rangos del score. El reloj que selecciona la línea sigue siendo `audioElement.currentTime`, por lo que inicia en el mismo cero del MP3 al presionar play.
+- El modo manual de letra usa `[B]`: cada pulsación revela solo la siguiente palabra como un recorte tipográfico. `[N]` vuelve al seguimiento por reloj. Este control permite acomodar la proyección a la interpretación humana cuando el fraseo cambia durante el ensayo.

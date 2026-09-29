@@ -215,7 +215,7 @@ export class AgentSystem {
 
       // C) Physarum chemotaxis sensing (steers heading towards trail concentrations)
       if (physarumWeight > 0.05 && trailData) {
-        boid.physarumSense(trailData, this.width, this.height);
+        boid.physarumSense(trailData, this.width, this.height, physarumWeight);
       }
 
       let shockwaveFx = 0;

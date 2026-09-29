@@ -19,7 +19,7 @@ export class Boid {
     this.maxSpeed = 3.6 + Math.random() * 1.2;
     this.maxForce = 0.16;
     this.mass = 1.0;
-    this.baseRadius = 3.5 + Math.random() * 2.0;
+    this.baseRadius = 4.2 + Math.random() * 2.1;
 
     this.perceptionRadius = 75;
     this.separationRadius = 28;
@@ -32,20 +32,21 @@ export class Boid {
     this.springPhase = 0;
     this.springAmplitude = 0;
     this.springDamping = 0.12;
-    this.springSpeed = 0.4;
+    this.springSpeed = 0.62;
     this.currentScale = 1.0;
+    this.rhythmStretch = 0;
+    this.rhythmSquash = 0;
+    this.impact = 0;
 
     this.setupVisuals();
   }
 
   setupVisuals() {
     const palettes = [
-      { primary: '#D4A853', outline: null, name: 'STAR' },       // Type 0
-      { primary: '#CC0033', outline: '#D4A853', name: 'HEART' }, // Type 1
-      { primary: '#CC0033', outline: null, name: 'CHERRY' },     // Type 2
-      { primary: '#D4A853', outline: null, name: 'CROWN' },      // Type 3
-      { primary: '#FF1493', outline: null, name: 'SPARKLE' },    // Type 4
-      { primary: '#2255AA', outline: null, name: 'DIAMOND' }     // Type 5
+      { primary: '#fff0c2', outline: '#d84455', name: 'VOICE' },
+      { primary: '#d9364e', outline: '#fff0c2', name: 'BASS' },
+      { primary: '#ffd260', outline: '#8d3151', name: 'SNARE' },
+      { primary: '#62c7cf', outline: '#26314f', name: 'HAT' }
     ];
     this.palette = palettes[this.type % palettes.length];
   }
@@ -157,7 +158,7 @@ export class Boid {
     return { fx, fy };
   }
 
-  physarumSense(trailData, width, height) {
+  physarumSense(trailData, width, height, weight = 1) {
     if (!trailData) return;
     const currentHeading = Math.atan2(this.vy, this.vx);
     const sensorDist = this.sensorDistance;
@@ -177,7 +178,7 @@ export class Boid {
     else if (leftVal > rightVal) turn = -this.rotationAngle;
     else if (rightVal > leftVal) turn = this.rotationAngle;
     if (turn !== 0) {
-      const newHeading = currentHeading + turn;
+      const newHeading = currentHeading + turn * Math.max(0, Math.min(1.5, weight));
       const speed = Math.hypot(this.vx, this.vy);
       this.vx = Math.cos(newHeading) * speed;
       this.vy = Math.sin(newHeading) * speed;
@@ -194,7 +195,8 @@ export class Boid {
   // Trigger Rhythm Heaven Bounce
   triggerBeatStep(intensity = 1.0) {
     this.springPhase = 0;
-    this.springAmplitude = intensity * 1.2; 
+    this.springAmplitude = Math.min(0.9, 0.28 + intensity * 0.46);
+    this.impact = Math.max(this.impact, Math.min(1, intensity));
   }
 
   update(width, height, delta = 1.0) {
@@ -218,40 +220,46 @@ export class Boid {
     if (this.y < 0) this.y += height;
     if (this.y >= height) this.y -= height;
 
-    // Rhythm Heaven Spring Physics Scale
+    // Short, stable spring: impact squash first, then a visible forward stretch.
     if (this.springAmplitude > 0.01) {
       this.springPhase += delta * this.springSpeed;
-      // Spring formula: 1 + amp * sin(phase) * exp(-damping * phase)
-      this.currentScale = 1.0 + this.springAmplitude * Math.sin(this.springPhase) * Math.exp(-this.springDamping * this.springPhase);
-      
-      // Gradually reduce amplitude when phase is large enough to save computation
-      if (this.springPhase > 20) {
+      const envelope = Math.exp(-0.42 * this.springPhase);
+      const wave = Math.sin(this.springPhase);
+      this.currentScale = 1 + wave * this.springAmplitude * envelope * 0.16;
+      this.rhythmStretch = Math.max(0, wave) * this.springAmplitude * envelope * 0.42;
+      this.rhythmSquash = Math.max(0, -wave) * this.springAmplitude * envelope * 0.24;
+      if (this.springPhase > 10) {
         this.springAmplitude = 0;
         this.currentScale = 1.0;
       }
     } else {
       this.currentScale = 1.0;
+      this.rhythmStretch = 0;
+      this.rhythmSquash = 0;
     }
+    this.impact *= Math.exp(-0.28 * delta);
   }
 
   draw(ctx) {
     const heading = Math.atan2(this.vy, this.vx);
     const speed = Math.hypot(this.vx, this.vy);
     
-    // Squash and stretch: squash in direction of movement (wider perpendicular)
-    const stretch = Math.min(speed / this.maxSpeed, 1.0) * 0.2; 
-    const scaleX = 1.0 - stretch; // Squashed along movement
-    const scaleY = 1.0 + stretch; // Stretched perpendicular
+    // x points into the direction of travel after rotation: longer when moving,
+    // wider on impact, so the symbols read as bouncing rather than trembling.
+    const travelStretch = Math.min(speed / this.maxSpeed, 1.0) * 0.11;
+    const impactSquash = this.impact * 0.16;
+    const scaleX = 1 + travelStretch + this.rhythmStretch - impactSquash - this.rhythmSquash * .18;
+    const scaleY = 1 - travelStretch * .35 - this.rhythmStretch * .52 + impactSquash + this.rhythmSquash;
 
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(heading); // Rotate based on heading
     ctx.scale(this.currentScale * scaleX, this.currentScale * scaleY);
 
-    ctx.shadowBlur = 8;
+    ctx.shadowBlur = 3;
     ctx.shadowColor = this.palette.primary;
 
-    const s = this.baseRadius * 1.5;
+    const s = this.baseRadius * 1.72;
 
     // Helper for specular highlight
     const drawHighlight = (hx, hy) => {
@@ -261,106 +269,48 @@ export class Boid {
       ctx.fill();
     };
 
-    const typeMod = this.type % 6;
+    const typeMod = this.type % 4;
     
     if (typeMod === 0) {
-      // STAR
+      // Vocal: soft petal/voice mark.
       ctx.fillStyle = this.palette.primary;
       ctx.beginPath();
-      for (let i = 0; i < 5; i++) {
-        const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
-        const radius = s * 1.4;
-        ctx.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
-      }
+      ctx.ellipse(0, 0, s * 1.08, s * 0.68, 0, 0, Math.PI * 2);
       ctx.closePath();
       ctx.fill();
-      drawHighlight(s * 0.3, -s * 0.3);
+      ctx.strokeStyle = this.palette.outline; ctx.lineWidth = Math.max(1, s * 0.14); ctx.stroke();
+      ctx.fillStyle = '#fff9e9'; ctx.beginPath(); ctx.ellipse(s * 0.22, -s * 0.05, s * 0.3, s * 0.15, -0.2, 0, Math.PI * 2); ctx.fill();
 
     } else if (typeMod === 1) {
-      // HEART
+      // Bass: deep double pulse diamond.
       ctx.fillStyle = this.palette.primary;
       if (this.palette.outline) {
         ctx.lineWidth = 1.5;
         ctx.strokeStyle = this.palette.outline;
       }
-      ctx.beginPath();
-      ctx.moveTo(0, s * 0.4);
-      ctx.bezierCurveTo(s * 1.5, -s * 0.8, s * 0.8, -s * 1.5, 0, -s * 0.5);
-      ctx.bezierCurveTo(-s * 0.8, -s * 1.5, -s * 1.5, -s * 0.8, 0, s * 0.4);
+      ctx.beginPath(); ctx.moveTo(0, -s * 1.1); ctx.lineTo(s * 0.86, 0); ctx.lineTo(0, s * 1.1); ctx.lineTo(-s * 0.86, 0); ctx.closePath();
       ctx.fill();
-      if (this.palette.outline) ctx.stroke();
-      drawHighlight(-s * 0.4, -s * 0.6);
+      ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, s * 0.34, 0, Math.PI * 2); ctx.stroke();
 
     } else if (typeMod === 2) {
-      // CHERRY
-      ctx.fillStyle = '#2E8B57'; // Green stem
-      ctx.beginPath();
-      ctx.moveTo(0, -s * 1.5);
-      ctx.quadraticCurveTo(s * 0.5, -s * 0.5, s * 0.6, s * 0.2);
-      ctx.moveTo(0, -s * 1.5);
-      ctx.quadraticCurveTo(-s * 0.5, -s * 0.5, -s * 0.6, s * 0.2);
-      ctx.stroke();
-
+      // Snare: crisp cut-paper burst.
       ctx.fillStyle = this.palette.primary;
       ctx.beginPath();
-      ctx.arc(s * 0.6, s * 0.2, s * 0.6, 0, Math.PI * 2);
+      for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 - Math.PI / 2, r = i % 2 ? s * 0.48 : s * 1.18; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+      ctx.closePath(); ctx.fill(); ctx.strokeStyle = this.palette.outline; ctx.lineWidth = Math.max(1, s * 0.12); ctx.stroke();
+      ctx.fillStyle = '#fff9e9'; ctx.beginPath();
+      ctx.arc(0, 0, s * 0.2, 0, Math.PI * 2);
       ctx.fill();
-      drawHighlight(s * 0.4, s * 0.0);
-
-      ctx.beginPath();
-      ctx.arc(-s * 0.6, s * 0.2, s * 0.6, 0, Math.PI * 2);
-      ctx.fill();
-      drawHighlight(-s * 0.8, s * 0.0);
 
     } else if (typeMod === 3) {
-      // CROWN
+      // Hi-hat: bright double glint.
       ctx.fillStyle = this.palette.primary;
       ctx.beginPath();
-      ctx.moveTo(-s, s * 0.8);
-      ctx.lineTo(s, s * 0.8);
-      ctx.lineTo(s * 1.2, -s * 0.8);
-      ctx.lineTo(s * 0.5, 0);
-      ctx.lineTo(0, -s * 1.2);
-      ctx.lineTo(-s * 0.5, 0);
-      ctx.lineTo(-s * 1.2, -s * 0.8);
+      ctx.moveTo(-s * 1.3, 0); ctx.lineTo(0, -s * 0.25); ctx.lineTo(s * 1.3, 0); ctx.lineTo(0, s * 0.25);
       ctx.closePath();
       ctx.fill();
-      drawHighlight(0, 0);
-
-    } else if (typeMod === 4) {
-      // SPARKLE
-      ctx.fillStyle = this.palette.primary;
-      ctx.beginPath();
-      ctx.moveTo(0, -s * 1.8);
-      ctx.quadraticCurveTo(0, 0, s * 1.8, 0);
-      ctx.quadraticCurveTo(0, 0, 0, s * 1.8);
-      ctx.quadraticCurveTo(0, 0, -s * 1.8, 0);
-      ctx.quadraticCurveTo(0, 0, 0, -s * 1.8);
-      ctx.fill();
-      drawHighlight(0, 0);
-
-    } else if (typeMod === 5) {
-      // DIAMOND
-      ctx.fillStyle = this.palette.primary;
-      ctx.beginPath();
-      ctx.moveTo(0, -s * 1.2);
-      ctx.lineTo(s, 0);
-      ctx.lineTo(0, s * 1.2);
-      ctx.lineTo(-s, 0);
-      ctx.closePath();
-      ctx.fill();
-      
-      // Facet highlight
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      ctx.beginPath();
-      ctx.moveTo(0, -s * 1.2);
-      ctx.lineTo(s * 0.5, -s * 0.6);
-      ctx.lineTo(0, 0);
-      ctx.lineTo(-s * 0.5, -s * 0.6);
-      ctx.closePath();
-      ctx.fill();
-
-      drawHighlight(0, -s * 0.4);
+      ctx.strokeStyle = this.palette.outline; ctx.lineWidth = Math.max(1, s * 0.13); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-s * 0.58, -s * 0.62); ctx.lineTo(0, 0); ctx.lineTo(s * 0.58, s * 0.62); ctx.stroke();
     }
 
     ctx.restore();

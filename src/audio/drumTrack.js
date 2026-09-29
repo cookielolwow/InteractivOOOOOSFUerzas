@@ -11,6 +11,7 @@ export class AudioCompanion {
     this.isPlayingDrum = false;
     this.step = 0;
     this.timerId = null;
+    this.drumStartedAt = 0;
 
     // Official track loaded automatically
     this.audioElement = new Audio(defaultSongUrl);
@@ -133,6 +134,7 @@ export class AudioCompanion {
     this.isPlayingDrum = !this.isPlayingDrum;
     if (this.isPlayingDrum) {
       this.step = 0;
+      this.drumStartedAt = this.audioCtx.currentTime;
       this.scheduleBeat();
     } else if (this.timerId) {
       clearTimeout(this.timerId);
@@ -172,5 +174,10 @@ export class AudioCompanion {
       return this.audioElement.currentTime;
     }
     return null;
+  }
+
+  getDrumTime() {
+    if (!this.isPlayingDrum || !this.audioCtx) return null;
+    return Math.max(0, this.audioCtx.currentTime - this.drumStartedAt);
   }
 }
