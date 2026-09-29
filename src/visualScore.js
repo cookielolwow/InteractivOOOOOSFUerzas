@@ -11,7 +11,7 @@ export const SECTIONS = [
     endTime: 18,
     musicalPassage: 'Voz susurrada solitaria, acordes lo-fi nostálgicos.',
     visualIntention: 'Cúmulo íntimo central, reposo y melancolía.',
-    actionHint: 'Pulsa [J] para la letra proyectada; marca el acento con [S].',
+    actionHint: 'Escucha el pulso y elige cuándo intervenir.',
     recommendedPreset: {
       separationWeight: 0.6,
       alignmentWeight: 0.4,

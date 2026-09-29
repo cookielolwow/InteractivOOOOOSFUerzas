@@ -54,19 +54,16 @@ Physarum modifica el rumbo al comparar sus muestras izquierda, centro y derecha.
 | **V** | Alterno el peso de separación para abrir o cerrar el espacio entre agentes. |
 | **F** o **T** | Enciendo o apago Physarum: depósito, visualización y consulta de las estelas. |
 | **I** | Elijo el instante del recorte de PinkPantheress. Aparece brevemente en una posición aleatoria; no lo dispara el reloj de la canción. |
-| **Clic en el lienzo** | Aplico en ese punto un gesto que alterna entre dispersar, reunir, girar y volver al movimiento libre. Si cargué una letra, el clic también avanza su cue manual. |
+| **Clic en el lienzo** | Aplico en ese punto un gesto que alterna entre dispersar, reunir, girar y volver al movimiento libre. |
 | **1–6** | Elijo manualmente una sección del score. Si la canción está reproduciéndose, la sección también posiciona el audio en su tiempo inicial. |
 
-### Audio, letra y presentación
+### Audio y presentación
 
 | Control | Qué hago con él |
 |---|---|
 | **L** o botón de canción | Reproduzco o pauso *Girl Like Me*. También puedo cargar otro archivo de audio desde el panel. |
 | **P** o botón de base 2-step | Enciendo o apago el acompañamiento sintético de 138 BPM. |
-| **J** o botón **LETRA** | Muestro u oculto la proyección de la letra `.LRC`. |
-| **B** | Avanzo manualmente palabra por palabra en la letra y paso al modo manual. |
-| **N** | Devuelvo la letra al seguimiento de su reloj `.LRC`. |
-| **H** | Avanzo por el fragmento breve de estudio del fraseo. |
+| **B** | Lanzo los recortes del collage con un salto de papel más amplio. |
 | **M** o **F2** | Oculto o muestro el HUD. |
 | Botón **FULLSCREEN** | Presento el instrumento a pantalla completa. |
 | **R** | Reinicio la distribución del enjambre y limpio sus estelas. |
@@ -129,6 +126,24 @@ También puedo usar los botones del dock para golpear, cambiar cohesión o separ
 
 **Evidencia de verificación disponible:** `npm run build` terminó correctamente en la iteración del 29 de septiembre de 2026. Esto confirma la compilación, pero no demuestra por sí mismo una tasa concreta de FPS ni fluidez en el equipo de presentación.
 
+### 6. Corrección del cambio entre letra automática y manual
+
+Al usar la letra encontré un salto de estado: al pasar del modo sincronizado al manual podía continuar con un índice antiguo, en vez de partir de la palabra que estaba viendo. Corregí el cambio para que B o el clic continúen desde la línea y palabra actuales. También hice que el modo sincronizado espere la primera marca de tiempo del `.LRC`, y que un archivo vacío o inválido limpie el estado anterior.
+
+**Evidencia:** `src/ui/lyricsOverlay.js`, `findCueIndex()`, `advanceManualCue()`, `setAutomaticMode()` y `showMessage()`. La compilación de producción pasó después de esta corrección; me falta comprobar ambos modos durante un ensayo real.
+
+### 7. Seguimiento automático del audio
+
+Encontré que el proyecto ya incluía las marcas de tiempo de la letra, pero al cargarla empezaba en modo manual. Cambié el inicio para que la proyección consulte el tiempo actual del reproductor y siga las marcas del archivo `.LRC`; si quiero intervenir, B pasa al avance manual y N vuelve al seguimiento automático. Así no dependo de estimar el tiempo de la canción con el pulso de 138 BPM.
+
+**Evidencia:** `src/lyrics/girl-like-me.lrc`, `src/ui/lyricsOverlay.js` (`load()`, `update()` y `setAutomaticMode()`) y `src/main.js` (`getSongTime()`). La compilación pasó; debo escuchar la canción completa en el navegador para detectar cualquier desfase específico de la versión de audio.
+
+### 8. Retiro de la capa de letra y respuesta del collage
+
+Después de probarla, la proyección de letra no funcionó de forma confiable y decidí quitarla de la interfaz. También retiré sus teclas y el panel para estudiar el fraseo; B ahora activa un salto más amplio de los recortes. Hice que los golpes impulsen las capas fotográficas y que los colores y el tartán transicionen con el reloj de la canción. Quité además el rótulo “LONDON / 2-STEP” del fondo.
+
+**Evidencia:** `src/main.js` (teclas y reloj de audio), `src/ui/camcorderUI.js` (controles visibles), `src/background.js` (paleta, tartán y movimiento por golpes) y `src/styles.css` (estilos de proyección retirados). La compilación de producción pasó; comprobé que la interfaz ya no ofrece controles de letra.
+
 ## Partitura de interpretación
 
 La tabla es una guía de escucha, no una secuencia ejecutada automáticamente. Si durante el performance la canción pide otra respuesta, puedo sostener el estado actual o elegir otra intervención.
@@ -179,9 +194,9 @@ La combinación entre cohesión, dispersión, flow fields y estelas ofrece una m
 
 ### 4. Interpretación humana — 21 / 25 (provisional)
 
-Las secciones se seleccionan manualmente con 1–6 y hay controles de gesto, golpe y estelas. Los clics cambian temporalmente el comportamiento alrededor del punto elegido. La tecla I deja en mis manos el momento del recorte fotográfico, y la selección de sección controla la paleta. El reloj de canción puede sincronizar la letra si la uso; el cue B permite controlarla manualmente. Debo mostrar en el ensayo que escucho y decido cuándo intervenir, sin seguir el score de forma automática.
+Las secciones se seleccionan manualmente con 1–6 y hay controles de gesto, golpe y estelas. Los clics cambian temporalmente el comportamiento alrededor del punto elegido. La tecla I deja en mis manos el momento del recorte fotográfico; al avanzar la canción, el fondo cambia sus colores. Debo mostrar en el ensayo que escucho y decido cuándo intervenir, sin seguir el score de forma automática.
 
-**Evidencias:** `src/main.js` (teclas, puntero y selección de sección), `src/visualScore.js` (el score no avanza de sección por sí solo), `src/ui/lyricsOverlay.js` (modo automático y control manual de letra).
+**Evidencias:** `src/main.js` (teclas, puntero y selección de sección) y `src/visualScore.js` (el score no avanza de sección por sí solo).
 
 ### Puntaje de trabajo: 82 / 100 — revisar tras el ensayo
 
@@ -194,7 +209,7 @@ Este total no es una nota certificada. Debo ajustar cada criterio según las pru
 - [ ] Capturar evidencia del modo de pantalla completa y de dos cambios perceptibles de parámetros.
 - [ ] Comprobar fluidez en el equipo y navegador de presentación; no afirmar “60 FPS estables” sin medirlo.
 - [ ] Ensayar cuándo usar I, A/S/D y Q para que los recortes y cambios del enjambre respondan a decisiones que tomo al escuchar.
-- [ ] Si proyecto letra sincronizada, probar también el cue manual B para decidir cuál modo apoya mejor mi interpretación.
+- [ ] Probar las transiciones de color y los saltos de papel mientras avanza la canción.
 - [ ] Añadir a esta bitácora la fecha y una reflexión personal después del ensayo.
 
 ## Referencias de consulta

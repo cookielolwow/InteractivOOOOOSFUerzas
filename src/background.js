@@ -17,6 +17,7 @@ export class FancyBackground {
     this.lastSceneTime = null;
     this.lastInputPulse = 0;
     this.poseAccent = 0;
+    this.imageKick = 0;
     this.paperHits = [];
     this.portraitFlash = null;
     this.portraitSeed = 0;
@@ -26,8 +27,6 @@ export class FancyBackground {
       bigBen: this.loadImage(bigBenUrl),
       pinkPantheress: this.loadImage(pinkPantheressUrl)
     };
-    this.cropCache = new WeakMap();
-    this.tartanTile = this.makeTartanTile();
     this.palette = [
       ['#f3d7c4', '#f5b4a4', '#e53c43'],
       ['#f5eee0', '#83cbd0', '#e7344f'],
@@ -37,16 +36,20 @@ export class FancyBackground {
       ['#e8d7ce', '#566d91', '#c93345']
     ];
     this.section = 0;
+    this.paletteBlend = 0;
+    this.tartanTiles = this.palette.map(colors => this.makeTartanTile(colors));
+    this.cropCache = new WeakMap();
   }
 
   resize(width, height) { this.width = width; this.height = height; }
-  setSection(index) { this.section = index % this.palette.length; }
+  setSection(index) { this.section = index % this.palette.length; this.paletteBlend = 0; }
   triggerBeatRing(x, y, color = '#fff1b8') {
     this.paperHits.push({ x, y, age: 0, alpha: 1, color });
     this.triggerRhythmShift(1);
   }
   triggerPortraitFlash() {
     // Portraits are performer cues, not events scheduled from the audio clock.
+    this.triggerRhythmShift(1.5);
     const random = Math.random;
     this.portraitFlash = {
       start: this.realTime,
@@ -61,6 +64,7 @@ export class FancyBackground {
   triggerRhythmShift(intensity = 1) {
     this.scrollKick = Math.min(3.1, this.scrollKick + 0.72 * intensity);
     this.pulse = Math.max(this.pulse, Math.min(1, 0.5 + intensity * 0.35));
+    this.imageKick = Math.min(1.8, this.imageKick + Math.max(.75, intensity * 1.1));
   }
 
   loadImage(url) {
@@ -102,9 +106,10 @@ export class FancyBackground {
     // should feel like repositioned paper cut-outs, not smooth CSS wobble.
     const pose = [-1, -.45, .4, 1, .15, -.8, -.25, .65][Math.floor(this.realTime * 8 + motionSeed) % 8];
     const accent = this.poseAccent * (((motionSeed % 3) - 1) * .55 + .45);
-    const tilt = rotation + pose * .052 + accent * .055;
-    const nudgeX = pose * width * .012 + accent * width * .009;
-    const nudgeY = ((pose === 1 || pose === -1) ? -1 : 1) * height * .006;
+    const leap = this.imageKick * Math.sin(motionSeed * 12.17 + Math.floor(this.realTime * 8) * 1.7);
+    const tilt = rotation + pose * .052 + accent * .055 + leap * .12;
+    const nudgeX = pose * width * .012 + accent * width * .009 + leap * width * .075;
+    const nudgeY = ((pose === 1 || pose === -1) ? -1 : 1) * height * .006 - Math.abs(leap) * height * .13;
     x = Math.round(x + nudgeX); y = Math.round(y + nudgeY);
     ctx.save(); ctx.translate(x, y); ctx.rotate(tilt); ctx.globalAlpha = alpha;
     const source = crop || { x: 0, y: 0, w: image.naturalWidth, h: image.naturalHeight };
@@ -172,31 +177,40 @@ export class FancyBackground {
       photoCrop, cue.seed);
   }
 
-  makeTartanTile() {
-    const tile = document.createElement('canvas'); tile.width = tile.height = 480;
-    const t = tile.getContext('2d'); t.fillStyle = '#efdcd2'; t.fillRect(0, 0, 480, 480);
-    // Oversized dusty-rose, saffron and ink tartan fills the backdrop like a
-    // printed textile. The large checks stay calm behind the flock.
-    const stripes = [[104, '#46546a'], [19, '#b44d66'], [7, '#d7b05c'], [3, '#fbefdf'], [45, '#9b5368']];
-    let x = 0;
-    for (const [width, color] of stripes) { t.fillStyle = color; t.fillRect(x, 0, width, 480); x += width; }
-    x = 172;
-    for (const [width, color] of stripes.slice(1, 4)) { t.fillStyle = color; t.fillRect(x, 0, width, 480); x += width; }
-    // The crossing bands make an actual sett; a light transparency pass lets
-    // the vertical warp remain visible through the horizontal weft.
-    t.globalAlpha = .76; let y = 0;
-    for (const [height, color] of stripes) { t.fillStyle = color; t.fillRect(0, y, 480, height); y += height; }
-    y = 172;
-    for (const [height, color] of stripes.slice(1, 4)) { t.fillStyle = color; t.fillRect(0, y, 480, height); y += height; }
+  makeTartanTile([sky, paper, accent]) {
+    const tile = document.createElement('canvas'); tile.width = tile.height = 384;
+    const t = tile.getContext('2d');
+    t.fillStyle = paper; t.fillRect(0, 0, 384, 384);
+    // Two balanced 192px setts repeat without a stray seam or oversized
+    // one-sided band. Crossed warp/weft keeps the fabric reading as tartan.
+    for (const origin of [0, 192]) {
+      for (const [offset, width, color, alpha] of [
+        [22, 34, sky, .66], [31, 4, accent, .96], [43, 2, '#fff3df', .92],
+        [104, 34, '#34283e', .26], [112, 5, accent, .9], [127, 2, '#fff3df', .88]
+      ]) {
+        t.globalAlpha = alpha; t.fillStyle = color;
+        t.fillRect(origin + offset, 0, width, 384);
+      }
+    }
+    t.globalAlpha = .65;
+    for (const origin of [0, 192]) {
+      for (const [offset, height, color, alpha] of [
+        [22, 34, sky, .68], [31, 4, accent, .92], [43, 2, '#fff3df', .88],
+        [104, 34, '#34283e', .24], [112, 5, accent, .86], [127, 2, '#fff3df', .84]
+      ]) {
+        t.globalAlpha = alpha * .65; t.fillStyle = color;
+        t.fillRect(0, origin + offset, 384, height);
+      }
+    }
+    t.globalAlpha = .12; t.fillStyle = '#fff8eb';
+    for (let i = 0; i < 384; i += 7) t.fillRect(i, 0, 1, 384);
+    t.globalAlpha = .1; t.fillStyle = '#291d2c';
+    for (let i = 3; i < 384; i += 8) t.fillRect(0, i, 384, 1);
     t.globalAlpha = 1;
-    t.globalAlpha = .2; t.fillStyle = '#fff8eb';
-    for (let i = 0; i < 480; i += 6) t.fillRect(i, 0, 1, 480);
-    t.globalAlpha = .12; t.fillStyle = '#291d2c';
-    for (let i = 2; i < 480; i += 7) t.fillRect(0, i, 480, 1);
     return tile;
   }
 
-  update(time, pulse = 0) {
+  update(time, pulse = 0, songTime = null) {
     const realTime = time / 1000;
     const realDelta = this.lastRealTime === null ? 1 / 60 : Math.max(0, Math.min(.08, realTime - this.lastRealTime));
     this.lastRealTime = realTime;
@@ -205,6 +219,18 @@ export class FancyBackground {
     if (pulse > this.lastInputPulse + .18) this.poseAccent = 1;
     this.lastInputPulse = pulse;
     this.poseAccent *= Math.exp(-7 * realDelta);
+    this.imageKick *= Math.exp(-5.5 * realDelta);
+    if (Number.isFinite(songTime)) {
+      const starts = [0, 18, 45, 72, 100, 125];
+      let active = 0;
+      while (active < starts.length - 1 && songTime >= starts[active + 1]) active++;
+      this.section = active;
+      const nextStart = starts[active + 1];
+      if (nextStart !== undefined) {
+        const blendDuration = Math.min(5, (nextStart - starts[active]) * .28);
+        this.paletteBlend = Math.max(0, Math.min(1, (songTime - (nextStart - blendDuration)) / blendDuration));
+      } else this.paletteBlend = 0;
+    }
     const sceneDelta = this.lastSceneTime === null ? 1 / 60 : Math.max(0, Math.min(.08, this.time - this.lastSceneTime));
     this.lastSceneTime = this.time;
     this.scrollKick *= Math.exp(-5.2 * sceneDelta);
@@ -216,7 +242,15 @@ export class FancyBackground {
 
   render(ctx) {
     const w = this.width, h = this.height;
-    const [baseSky, basePaper, baseAccent] = this.palette[this.section];
+    const currentPalette = this.palette[this.section];
+    const nextPalette = this.palette[(this.section + 1) % this.palette.length];
+    const blendColor = (a, b, amount) => {
+      const color = value => [1, 3, 5].map(i => parseInt(value.slice(i, i + 2), 16));
+      const ca = color(a), cb = color(b);
+      return `rgb(${ca.map((value, index) => Math.round(value + (cb[index] - value) * amount)).join(',')})`;
+    };
+    const palette = currentPalette.map((color, index) => blendColor(color, nextPalette[index], this.paletteBlend));
+    const [baseSky, basePaper, baseAccent] = palette;
     const pulse = Math.min(this.pulse, 1);
     const skyWash = ctx.createLinearGradient(0, 0, 0, h);
     skyWash.addColorStop(0, baseSky);
@@ -247,15 +281,6 @@ export class FancyBackground {
     this.drawProjectionGrade(ctx, w, h, baseAccent);
 
     this.drawPaperHitFeedback(ctx);
-    // Collage caption stays legible while the scene shifts through song sections.
-    ctx.save();
-    ctx.translate(w * 0.055, h * 0.43);
-    ctx.rotate(-0.045);
-    ctx.fillStyle = '#fff8e9'; ctx.strokeStyle = '#ad494a'; ctx.lineWidth = 2;
-    ctx.fillRect(-8, -17, 210, 39); ctx.strokeRect(-8, -17, 210, 39);
-    ctx.fillStyle = '#ad494a'; ctx.font = 'bold 14px "Space Mono", monospace';
-    ctx.fillText('LONDON / 2-STEP', 3, 8);
-    ctx.restore();
   }
 
   paperCloud(ctx, x, y, scale) {
@@ -264,16 +289,18 @@ export class FancyBackground {
   }
 
   drawTartan(ctx, w, h, pulse, accent) {
-    const tartan = ctx.createPattern(this.tartanTile, 'repeat');
     ctx.save();
-    ctx.translate(-this.scrollOffset * .12, Math.sin(this.realTime * .22) * 3);
-    ctx.globalAlpha = .84 + pulse * .035;
-    ctx.fillStyle = tartan;
-    ctx.fillRect(-480, -10, w + 960, h + 20);
-    // Soft print wash keeps the tartan readable while the song changes mood.
-    ctx.globalAlpha = .12 + pulse * .08;
-    ctx.fillStyle = accent;
-    ctx.fillRect(-480, -10, w + 960, h + 20);
+    const scroll = -this.scrollOffset * .12;
+    const drift = Math.sin(this.realTime * .22) * 2;
+    const paint = (tile, alpha) => {
+      const pattern = ctx.createPattern(tile, 'repeat');
+      ctx.save(); ctx.translate(scroll, drift); ctx.globalAlpha = alpha * (.77 + pulse * .035);
+      ctx.fillStyle = pattern; ctx.fillRect(-384, -384, w + 768, h + 768); ctx.restore();
+    };
+    paint(this.tartanTiles[this.section], 1);
+    if (this.paletteBlend > 0) paint(this.tartanTiles[(this.section + 1) % this.palette.length], this.paletteBlend);
+    ctx.globalAlpha = .08 + pulse * .035;
+    ctx.fillStyle = accent; ctx.fillRect(0, 0, w, h);
     ctx.restore();
   }
 
@@ -282,21 +309,41 @@ export class FancyBackground {
       const progress = hit.age / .42;
       const x = hit.x - progress * this.width * .16;
       const y = hit.y - progress * this.height * .025;
-      const size = Math.min(this.width, this.height) * (.11 + progress * .04);
-      ctx.save(); ctx.translate(x, y); ctx.rotate(-.035 + progress * .08);
-      ctx.globalAlpha = hit.alpha * .78;
-      // A quick pasted-paper snap: offset print, torn strip and ink dash.
-      ctx.fillStyle = 'rgba(42, 31, 49, .55)';
-      ctx.beginPath(); ctx.moveTo(-size * .75, -size * .17); ctx.lineTo(size * .65, -size * .22);
-      ctx.lineTo(size * .82, size * .12); ctx.lineTo(-size * .62, size * .2); ctx.closePath(); ctx.fill();
-      ctx.globalAlpha = hit.alpha;
-      ctx.fillStyle = hit.color;
-      ctx.beginPath(); ctx.moveTo(-size * .82, -size * .22); ctx.lineTo(size * .51, -size * .25);
-      ctx.lineTo(size * .72, -.02 * size); ctx.lineTo(size * .59, size * .17);
-      ctx.lineTo(-size * .49, size * .21); ctx.lineTo(-size * .76, size * .08); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = '#fff0dc'; ctx.lineWidth = Math.max(2, size * .025); ctx.stroke();
-      ctx.fillStyle = '#fff0dc'; ctx.globalAlpha = hit.alpha * .86;
-      ctx.fillRect(-size * .52, -size * .025, size * .22, size * .045);
+      const size = Math.min(this.width, this.height) * (.055 + progress * .012);
+      const step = Math.floor(hit.age * 18);
+      const pose = [-1, .5, 1, -.5][step % 4];
+      ctx.save(); ctx.translate(x, y); ctx.rotate(pose * .035);
+      // Three small opaque torn-paper flecks replace the old wide translucent
+      // slab, which read as an empty rectangular card over the skyline.
+      const flecks = [
+        { x: -size * .72, y: -size * .16, w: .28, h: .19, angle: -.34, color: hit.color },
+        { x: size * .03, y: size * .04, w: .34, h: .16, angle: .12, color: '#ffd36f' },
+        { x: size * .66, y: -size * .08, w: .22, h: .24, angle: .48, color: '#f05c78' }
+      ];
+      for (const fleck of flecks) {
+        ctx.save();
+        ctx.translate(fleck.x - progress * size * .18, fleck.y - progress * size * .12);
+        ctx.rotate(fleck.angle + pose * .12);
+        ctx.globalAlpha = hit.alpha;
+        ctx.fillStyle = 'rgba(35, 24, 43, .9)';
+        ctx.beginPath();
+        ctx.moveTo(-size * fleck.w * .52, -size * fleck.h * .46);
+        ctx.lineTo(size * fleck.w * .42, -size * fleck.h * .52);
+        ctx.lineTo(size * fleck.w * .55, size * fleck.h * .28);
+        ctx.lineTo(size * fleck.w * .12, size * fleck.h * .5);
+        ctx.lineTo(-size * fleck.w * .48, size * fleck.h * .38);
+        ctx.closePath(); ctx.fill();
+        ctx.translate(-size * .035, -size * .035);
+        ctx.fillStyle = fleck.color;
+        ctx.beginPath();
+        ctx.moveTo(-size * fleck.w * .5, -size * fleck.h * .45);
+        ctx.lineTo(size * fleck.w * .46, -size * fleck.h * .5);
+        ctx.lineTo(size * fleck.w * .52, size * fleck.h * .31);
+        ctx.lineTo(size * fleck.w * .08, size * fleck.h * .48);
+        ctx.lineTo(-size * fleck.w * .48, size * fleck.h * .34);
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
       ctx.restore();
     }
   }

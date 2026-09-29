@@ -13,7 +13,6 @@ export class CamcorderUI {
     this.isLabOpen = false;
     this.isUiVisible = true;
     this.prevPulse = 0;
-    this.lyricPart = 0;
 
     this.buildDOM();
     this.buildRhythmTitleCard();
@@ -21,14 +20,18 @@ export class CamcorderUI {
   }
 
   buildRhythmTitleCard() {
-    this.rhythmTitleCard = document.createElement('div');
-    this.rhythmTitleCard.className = 'rhythm-title-card';
-    this.rhythmTitleCard.innerHTML = `
-      <div class="rhythm-title-sticker">
-        <strong id="rhythmTitleMain">ON BEAT!</strong>
-      </div>`;
-    document.body.appendChild(this.rhythmTitleCard);
-    this.rhythmTitleMain = this.rhythmTitleCard.querySelector('#rhythmTitleMain');
+    this.rhythmTitleCards = Array.from({ length: 4 }, () => {
+      const element = document.createElement('div');
+      element.className = 'rhythm-title-card';
+      element.innerHTML = '<div class="rhythm-title-sticker"><strong></strong></div>';
+      document.body.appendChild(element);
+      return {
+        element,
+        label: element.querySelector('strong'),
+        startedAt: -Infinity,
+        slot: -1
+      };
+    });
   }
 
   buildDOM() {
@@ -47,7 +50,6 @@ export class CamcorderUI {
             <span class="hud-timer" id="hudTimer">00:00</span>
             <button class="hud-btn" id="btnToggleLab" title="Panel de Percepción y Parámetros">⚙️ PARÁMETROS</button>
             <button class="hud-btn" id="btnFullscreen" title="Pantalla Completa (F11)">⛶ FULLSCREEN</button>
-            <button class="hud-btn" id="btnLyrics" title="Mostrar u ocultar la letra (J)">♫ LETRA · J</button>
             <button class="hud-btn" id="btnToggleUI" title="Ocultar o mostrar HUD (M / F2)">👁️ HUD · M / F2</button>
           </div>
         </header>
@@ -58,7 +60,7 @@ export class CamcorderUI {
             <span class="score-label">♫ RHYTHM HEAVEN · HUMAN CUE ♫</span>
             <div class="score-current-info" id="scoreCurrentInfo">
               <strong id="scoreSectionName">INTRO: INTIMIDAD VOCAL</strong>
-              <span id="scoreHint">Pulsa [J] para la letra proyectada; marca el acento con [S].</span>
+              <span id="scoreHint">Escucha el pulso y elige cuándo intervenir.</span>
             </div>
           </div>
 
@@ -92,18 +94,6 @@ export class CamcorderUI {
           <div class="rhythm-prompt"><span>HIT THE BEAT</span><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd><small>Q / SPACE · HIT</small></div>
         </div>
 
-        <aside class="lyric-study-card" id="lyricStudyCard" aria-live="polite">
-          <div class="lyric-card-label"><span>LETRA EN CAPAS</span><span>ESTUDIO 01 / 04</span></div>
-          <div class="lyric-phrase" aria-label="Fragmento breve de estudio de la letra">
-            <span data-lyric-part="0" class="is-current">WHY</span>
-            <span data-lyric-part="1">AREN'T YOU</span>
-            <span data-lyric-part="2">TIRED</span>
-            <span data-lyric-part="3">OF THE WAY YOU…</span>
-          </div>
-          <div class="lyric-study-note" id="lyricStudyNote">1 sílaba · plantea la pregunta</div>
-          <div class="lyric-study-footer"><kbd>H</kbd> RECORRER FRASE <span id="lyricStudyCount">1 / 4</span></div>
-        </aside>
-
         <!-- Bottom Expressive Performance Dock -->
         <footer class="hud-bottom-dock">
           <!-- Rhythm Keys Legend -->
@@ -113,7 +103,7 @@ export class CamcorderUI {
             <span><kbd>S</kbd> AGRUPAR</span>
             <span><kbd>D</kbd> GIRAR</span>
             <span><kbd>F</kbd> ESTELAS</span>
-            <span><kbd>B</kbd> CUE LETRA</span>
+            <span><kbd>B</kbd> SALTO DE PAPEL</span>
             <span><kbd>I</kbd> FOTO</span>
           </div>
 
@@ -161,10 +151,6 @@ export class CamcorderUI {
             <label class="audio-upload-btn" title="Cargar archivo de audio alternativo">
               <span>♛ LOAD AUDIO</span>
               <input type="file" id="fileAudioInput" accept="audio/*" style="display:none">
-            </label>
-            <label class="audio-upload-btn lyrics-upload-btn" title="Cargar letra sincronizada desde un archivo LRC local">
-              <span>♫ CARGAR LETRA .LRC</span>
-              <input type="file" id="fileLyricsInput" accept=".lrc,text/plain" style="display:none">
             </label>
           </div>
         </footer>
@@ -231,16 +217,10 @@ export class CamcorderUI {
     this.btnToggleDrum = this.container.querySelector('#btnToggleDrum');
     this.txtDrumState = this.container.querySelector('#txtDrumState');
     this.fileAudioInput = this.container.querySelector('#fileAudioInput');
-    this.fileLyricsInput = this.container.querySelector('#fileLyricsInput');
-    this.onLyricsFile = null;
     this.btnPlayCustomAudio = this.container.querySelector('#btnPlayCustomAudio');
     this.txtSongState = this.container.querySelector('#txtSongState');
     this.rhythmFeedback = this.container.querySelector('#rhythmFeedback');
     this.rhythmPrompt = this.container.querySelector('.rhythm-prompt');
-    this.lyricStudyCard = this.container.querySelector('#lyricStudyCard');
-    this.lyricStudyNote = this.container.querySelector('#lyricStudyNote');
-    this.lyricStudyCount = this.container.querySelector('#lyricStudyCount');
-    this.lyricParts = this.container.querySelectorAll('[data-lyric-part]');
   }
 
   bindEvents() {
@@ -309,10 +289,6 @@ export class CamcorderUI {
       this.container.classList.toggle('hud-hidden', !this.isUiVisible);
     });
 
-    this.container.querySelector('#btnLyrics').addEventListener('click', () => {
-      this.onToggleLyrics?.();
-    });
-
     // 5. Audio Companion
     this.btnToggleDrum.addEventListener('click', () => {
       const playing = this.audioCompanion.toggleDrumTrack();
@@ -327,12 +303,6 @@ export class CamcorderUI {
         this.audioCompanion.loadAudioFile(file);
         this.txtSongState.textContent = '▶ PLAY AUDIO CARGADO';
       }
-    });
-
-    this.fileLyricsInput.addEventListener('change', (e) => {
-      const file = e.target.files?.[0];
-      if (file) this.onLyricsFile?.(file);
-      e.target.value = '';
     });
 
     this.btnPlayCustomAudio.addEventListener('click', () => {
@@ -438,34 +408,28 @@ export class CamcorderUI {
       'TRAIL ON': ['TRAIL ON!', 'green'],
       'TRAIL OFF': ['TRAIL CUT!', 'cream'],
       'CLOSE IN!': ['CLOSE IN!', 'blue'],
-      'BREAK OUT!': ['BREAK OUT!', 'red'],
-      'AUTO LYRICS': ['AUTO LYRICS', 'blue']
+      'BREAK OUT!': ['BREAK OUT!', 'red']
     };
     const [title, tone] = titles[label] || [label.replace(/!/g, ''), 'gold'];
-    this.rhythmTitleMain.textContent = title;
-    const placements = [[12, 18], [82, 20], [15, 73], [80, 70], [47, 16], [52, 78]];
-    const [x, y] = placements[Math.floor(Math.random() * placements.length)];
-    this.rhythmTitleCard.style.setProperty('--title-x', `${x}vw`);
-    this.rhythmTitleCard.style.setProperty('--title-y', `${y}vh`);
-    this.rhythmTitleCard.dataset.tone = tone;
-    this.rhythmTitleCard.classList.remove('is-playing');
-    void this.rhythmTitleCard.offsetWidth;
-    this.rhythmTitleCard.classList.add('is-playing');
+    const now = performance.now();
+    const cards = this.rhythmTitleCards;
+    const card = cards.find(item => now - item.startedAt >= 860) ||
+      cards.reduce((oldest, item) => item.startedAt < oldest.startedAt ? item : oldest);
+    const slots = [[24, 29], [76, 31], [25, 70], [75, 69]];
+    const busySlots = new Set(cards.filter(item => now - item.startedAt < 860 && item !== card).map(item => item.slot));
+    const slot = slots.findIndex((_, index) => !busySlots.has(index));
+    const slotIndex = slot < 0 ? (card.slot + 1 + slots.length) % slots.length : slot;
+    const [x, y] = slots[slotIndex];
+
+    card.label.textContent = title;
+    card.element.style.setProperty('--title-x', `${x}vw`);
+    card.element.style.setProperty('--title-y', `${y}vh`);
+    card.element.dataset.tone = tone;
+    card.element.classList.remove('is-playing');
+    void card.element.offsetWidth;
+    card.startedAt = now;
+    card.slot = slotIndex;
+    card.element.classList.add('is-playing');
   }
 
-  advanceLyricStudy() {
-    const notes = [
-      '1 sílaba · plantea la pregunta',
-      '2 sílabas · recoge el contratiempo',
-      '1 sílaba · acento y sostén',
-      '4 sílabas · suelta la frase'
-    ];
-    this.lyricPart = (this.lyricPart + 1) % this.lyricParts.length;
-    this.lyricParts.forEach((part, index) => part.classList.toggle('is-current', index === this.lyricPart));
-    this.lyricStudyNote.textContent = notes[this.lyricPart];
-    this.lyricStudyCount.textContent = `${this.lyricPart + 1} / ${this.lyricParts.length}`;
-    this.lyricStudyCard.classList.remove('is-stepping');
-    void this.lyricStudyCard.offsetWidth;
-    this.lyricStudyCard.classList.add('is-stepping');
-  }
 }

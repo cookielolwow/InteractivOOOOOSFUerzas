@@ -14,13 +14,12 @@ Construido utilizando exclusivamente la paleta algorítmica de **Steering Behavi
 - **Interpretación Humana Activa**: Sin análisis de audio ni avance automático de secciones. El reloj puede seguir la canción; quien interpreta escucha, decide y conduce los cambios del score en tiempo real.
 - **Partitura Visual (Visual Score)**: Guía de interpretación en 6 secciones (Intro, Verso 1, Coro 1, Puente, Coro 2 y Outro) con presets de parámetros y pistas de acción en tiempo real.
 - **Escenario tartán**: el tejido impreso cubre el fondo; varias capas fotográficas del skyline se desplazan a la izquierda a distintas velocidades. Taxi y cabina cruzan el escenario como recortes con contorno y sombra, sin una tarjeta blanca detrás.
+- **Color y movimiento ligados a la canción**: la paleta y el tartán transicionan entre secciones siguiendo el reloj del audio. Los golpes de teclado hacen que los recortes fotográficos salten con más fuerza, en poses cortadas como papel animado.
 - **Retratos en cortes breves**: con <kbd>I</kbd>, quien interpreta decide cuándo aparece la foto de PinkPantheress; su posición cambia aleatoriamente, se inclina en poses discretas de stop motion y desaparece. El reloj musical no dispara este recorte.
-- **Lyric video local**: La letra compartida para esta pieza viene cargada como `.LRC` local y revela líneas y palabras con marcas de tiempo durante la canción. Puedes sustituirla desde **CARGAR LETRA .LRC**. <kbd>J</kbd> muestra u oculta la proyección.
 - **Golpes de escena**: Cada acción de interpretación muestra una tarjeta tipográfica de papel, empuja el collage urbano y desplaza brevemente algunos recortes. El feedback evita ondas circulares.
-- **Modo concierto**: Haces de luz, bloom suave, una silueta de audiencia y letras como recortes independientes convierten el paisaje en una proyección escénica. El HUD puede ocultarse con <kbd>M</kbd> o <kbd>F2</kbd>.
-- **Letra para estudiar**: Un fragmento breve se divide en cuatro gestos; la tecla <kbd>H</kbd> recorre acentos y contratiempos.
+- **Modo concierto**: Haces de luz, bloom suave y una silueta de audiencia convierten el paisaje en una proyección escénica. El HUD puede ocultarse con <kbd>M</kbd> o <kbd>F2</kbd>.
 - **Partículas con roles**: cuatro tipos de fragmento recortado sugieren voz, bajo, caja y hi-hat. Conservan percepción vecinal, alineación, cohesión, separación, consulta del flow field y sensores de Physarum.
-- **Intención y conducción humana**: los controles alteran las reglas o el entorno durante la interpretación; las secciones y la paleta cambian manualmente, y la foto se activa con <kbd>I</kbd>. No se analiza el audio para decidir el movimiento de los agentes.
+- **Intención y conducción humana**: los controles alteran las reglas o el entorno durante la interpretación; quien toca activa los gestos y la foto con <kbd>I</kbd>, mientras el color acompaña el avance de la canción. No se analiza el audio para decidir el movimiento de los agentes.
 - **Acompañamiento de Audio Opcional**: Incluye un sintetizador de base 2-step a 138 BPM incorporado y un cargador de archivos MP3 para ensayar la canción localmente.
 
 ---
@@ -34,17 +33,14 @@ Construido utilizando exclusivamente la paleta algorítmica de **Steering Behavi
 | <kbd>S</kbd> | **Gather** | Reúne el enjambre para los pasajes vocales. |
 | <kbd>D</kbd> | **Spin** | Cambia el campo entre corriente, vórtice y ondas. |
 | <kbd>F</kbd> / <kbd>T</kbd> | **Estelas Physarum** | Enciende o apaga las estelas químicas. |
-| <kbd>H</kbd> | **Estudiar el fraseo** | Avanza palabra por palabra por el fragmento breve y muestra su conteo silábico. |
 | <kbd>I</kbd> | **Recorte fotográfico** | Hace aparecer la foto en un lugar aleatorio por un instante; quien interpreta decide cuándo. |
+| <kbd>B</kbd> | **Salto de papel** | Da un impulso más amplio a los recortes del collage. |
 | <kbd>L</kbd> / Botón | **Reproducir "Girl Like Me"** | Reproduce/Pausa la canción oficial cargada desde `src/sonido/`. |
 | <kbd>C</kbd> | **Cohesión (Vocal)** | Muestra **CLOSE IN!** e incrementa la cohesión durante la voz íntima. |
 | <kbd>V</kbd> | **Separación (Breakbeat)** | Muestra **BREAK OUT!** para una dispersión centrífuga explosiva. |
 | <kbd>1</kbd> - <kbd>6</kbd> | **Secciones de la Partitura** | Salta a los movimientos de la canción (Intro, Verso, Coro, Puente, etc.). |
 | <kbd>P</kbd> | **Metrónomo 2-Step** | Activa/detiene la base rítmica sintetizada a 138 BPM. |
-| <kbd>J</kbd> | **Ocultar / Mostrar letra** | Controla la capa de lyric video sin afectar la simulación. |
-| <kbd>B</kbd> | **Cue de letra manual** | Revela la siguiente palabra como un cubito de letra y activa el modo manual. |
-| <kbd>N</kbd> | **Letra automática** | Devuelve la letra al reloj de reproducción de la canción. |
-| <kbd>M</kbd> / <kbd>F2</kbd> | **Ocultar / Mostrar HUD** | Modo de proyección; la capa de letra queda independiente. |
+| <kbd>M</kbd> / <kbd>F2</kbd> | **Ocultar / Mostrar HUD** | Modo de proyección para dejar visible la escenografía y el enjambre. |
 | <kbd>R</kbd> | **Reiniciar Enjambre** | Reposiciona los agentes en el centro. |
 | <kbd>F11</kbd> | **Pantalla Completa** | Activa pantalla completa para el performance. |
 
@@ -69,8 +65,6 @@ npm run dev
 npm run build
 npm run preview
 ```
-
-Para proyectar la letra completa, usa **CARGAR LETRA .LRC** y selecciona un archivo LRC con marcas `[mm:ss.xx]`. Después reproduce la canción. El archivo permanece local; no se sincroniza con servicios externos.
 
 ---
 

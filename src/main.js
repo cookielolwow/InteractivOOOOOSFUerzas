@@ -8,9 +8,6 @@ import { VisualScore } from './visualScore.js';
 import { AudioCompanion } from './audio/drumTrack.js';
 import { CamcorderUI } from './ui/camcorderUI.js';
 import { FancyBackground } from './background.js';
-import { parseLrc } from './lyrics/parseLrc.js';
-import { LyricsOverlay } from './ui/lyricsOverlay.js';
-import defaultLyricsSource from './lyrics/girl-like-me.lrc?raw';
 
 class VisualInstrumentApp {
   constructor() {
@@ -37,18 +34,6 @@ class VisualInstrumentApp {
 
     // Initialize Camcorder HUD UI
     this.ui = new CamcorderUI(this.agentSystem, this.visualScore, this.audioCompanion);
-    this.lyricsOverlay = new LyricsOverlay(this.ui.container);
-    this.lyricsOverlay.load(parseLrc(defaultLyricsSource), 'Girl Like Me · letra');
-    this.ui.lyricStudyCard.classList.add('is-replaced');
-    this.ui.onLyricsFile = async (file) => {
-      try {
-        const cues = parseLrc(await file.text());
-        this.lyricsOverlay.load(cues, file.name);
-      } catch {
-        this.lyricsOverlay.showMessage('No pude leer ese archivo. Prueba con una letra .LRC en texto plano.', true);
-      }
-    };
-    this.ui.onToggleLyrics = () => this.lyricsOverlay.toggle();
     
     // Initialize Fancy Background
     this.background = new FancyBackground(this.width, this.height);
@@ -82,7 +67,6 @@ class VisualInstrumentApp {
       if (event.target instanceof HTMLElement && event.target.closest('button, input, select, textarea, label, .hud-btn, .trigger-btn, .audio-btn')) {
         return;
       }
-      this.lyricsOverlay.advanceManualCue(this.visualScore.currentTime);
       this.agentSystem.interactAt(event.clientX, event.clientY);
     });
 
@@ -156,25 +140,16 @@ class VisualInstrumentApp {
         this.agentSystem.trailBuffer.clear();
       }
 
-      // [H]: Study the short hook fragment as syllables and rhythmic pickups.
-      if (key === 'H') this.ui.advanceLyricStudy();
-
       // [M]: Toggle HUD Visibility
       if (key === 'M' || e.code === 'F2') {
         this.ui.isUiVisible = !this.ui.isUiVisible;
         this.ui.container.classList.toggle('hud-hidden', !this.ui.isUiVisible);
       }
 
-      // [J]: show/hide the timestamped karaoke projection.
-      if (key === 'J') this.lyricsOverlay.toggle();
-
-      // [B]: performer advances one lyric cube; [N] returns to clock-following mode.
+      // [B]: snap the paper collage further in response to the performer.
       if (key === 'B') {
-        this.lyricsOverlay.advanceManualCue(this.audioCompanion.getSongTime() ?? this.visualScore.currentTime);
-      }
-      if (key === 'N') {
-        this.lyricsOverlay.setAutomaticMode();
-        this.ui.showRhythmHit('AUTO LYRICS');
+        this.background.triggerBeatRing(this.width / 2, this.height / 2, '#f77bad');
+        this.ui.showRhythmHit('PAPER SNAP!');
       }
 
       // [1 - 6]: Score Sections
@@ -249,7 +224,6 @@ class VisualInstrumentApp {
 
       // 2. Update Autonomous Agent Swarm
       this.agentSystem.update(currentTime, deltaMs / 16.666);
-      this.lyricsOverlay.update(songTime ?? this.visualScore.currentTime);
 
       // Update camera physics
       this.camera.scale += (this.camera.baseScale - this.camera.scale) * 0.15;
@@ -268,7 +242,7 @@ class VisualInstrumentApp {
       // 3. Clear Screen & Render Background
       this.ctx.clearRect(0, 0, this.width, this.height);
       if (this.background) {
-        this.background.update(currentTime, this.agentSystem.globalBeatPulse);
+        this.background.update(currentTime, this.agentSystem.globalBeatPulse, songTime);
         this.background.render(this.ctx);
       } else {
         this.ctx.fillStyle = '#0A0310';
