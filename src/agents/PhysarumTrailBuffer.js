@@ -3,6 +3,9 @@
 
 export class PhysarumTrailBuffer {
   constructor(width, height) {
+    // The trail is a soft chemical field; half-resolution keeps its texture
+    // while cutting full-screen diffusion and sensor readbacks to one quarter.
+    this.resolutionScale = 0.5;
     this.canvas = document.createElement('canvas');
     this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
     this.diffusionCanvas = document.createElement('canvas');
@@ -21,8 +24,10 @@ export class PhysarumTrailBuffer {
   }
 
   resize(width, height) {
-    this.width = Math.max(10, width);
-    this.height = Math.max(10, height);
+    this.screenWidth = Math.max(10, width);
+    this.screenHeight = Math.max(10, height);
+    this.width = Math.max(10, Math.round(this.screenWidth * this.resolutionScale));
+    this.height = Math.max(10, Math.round(this.screenHeight * this.resolutionScale));
     this.canvas.width = this.width;
     this.canvas.height = this.height;
     this.diffusionCanvas.width = this.width;
@@ -38,13 +43,15 @@ export class PhysarumTrailBuffer {
     if (!this.active) return;
 
     this.ctx.save();
-    this.ctx.globalAlpha = Math.min(1.0, 0.45 * intensity);
-    this.ctx.shadowBlur = 25 * intensity;
-    this.ctx.shadowColor = colorHex;
+    this.ctx.globalAlpha = Math.min(0.46, 0.27 * intensity);
+    // Blur is applied once to the trail layer during diffusion, avoiding a
+    // costly per-agent shadow filter on every frame.
+    this.ctx.shadowBlur = 0;
     this.ctx.fillStyle = colorHex;
 
     this.ctx.beginPath();
-    this.ctx.arc(x, y, radius * 0.9, 0, Math.PI * 2);
+    this.ctx.arc(x * this.resolutionScale, y * this.resolutionScale,
+      Math.max(1, radius * this.resolutionScale * 0.9), 0, Math.PI * 2);
     this.ctx.fill();
     this.ctx.restore();
   }
@@ -73,8 +80,9 @@ export class PhysarumTrailBuffer {
     this.ctx.fillRect(0, 0, this.width, this.height);
     this.ctx.restore();
 
-    // Cache image data every 3 frames for sensor reading (boosts FPS to 60+ effortlessly)
-    if (this.readCounter % 3 === 0) {
+    // Sensor data is refreshed every fourth frame; the field changes slowly
+    // enough that the agents still follow it fluidly.
+    if (this.readCounter % 4 === 0) {
       try {
         this.cachedImageData = this.ctx.getImageData(0, 0, this.width, this.height).data;
       } catch (e) {
@@ -100,7 +108,7 @@ export class PhysarumTrailBuffer {
     targetCtx.save();
     targetCtx.globalAlpha = opacity;
     targetCtx.globalCompositeOperation = 'screen';
-    targetCtx.drawImage(this.canvas, 0, 0);
+    targetCtx.drawImage(this.canvas, 0, 0, this.screenWidth, this.screenHeight);
     targetCtx.restore();
   }
 }

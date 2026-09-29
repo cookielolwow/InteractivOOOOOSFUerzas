@@ -1,14 +1,14 @@
 export class LyricsOverlay {
   constructor(container) {
     this.container = document.createElement('section');
-    this.container.className = 'lyrics-projector is-empty';
+    this.container.className = 'lyrics-projector is-empty is-hidden';
     this.container.setAttribute('aria-live', 'polite');
     this.container.setAttribute('aria-label', 'Letra sincronizada');
     this.container.innerHTML = `
-      <div class="lyrics-kicker"><span class="lyrics-equalizer">♫</span><span id="lyricsStatus">LETRA PARA PROYECCIÓN</span><span class="lyrics-page">LRC · J</span></div>
+      <div class="lyrics-kicker"><span class="lyrics-equalizer">♫</span><span id="lyricsStatus">LETRA EN MANO</span><span class="lyrics-page">CLICK · L</span></div>
       <div class="lyrics-previous" id="lyricsPrevious"></div>
-      <div class="lyrics-current" id="lyricsCurrent"></div>
-      <div class="lyrics-next" id="lyricsNext">Carga un archivo .LRC para mostrar toda la letra a tiempo.</div>
+      <div class="lyrics-current" id="lyricsCurrent">CLIC PARA REVELAR LA LETRA</div>
+      <div class="lyrics-next" id="lyricsNext">La frase aparece solo cuando decides activarla.</div>
       <div class="lyrics-progress"><span id="lyricsProgress"></span></div>`;
     document.body.appendChild(this.container);
     this.previous = this.container.querySelector('#lyricsPrevious');
@@ -17,10 +17,10 @@ export class LyricsOverlay {
     this.status = this.container.querySelector('#lyricsStatus');
     this.progress = this.container.querySelector('#lyricsProgress');
     this.cues = [];
-    this.visible = true;
+    this.visible = false;
     this.currentIndex = -1;
     this.currentWordIndex = -1;
-    this.manualMode = false;
+    this.manualMode = true;
     this.manualIndex = 0;
     this.manualWordIndex = -1;
   }
@@ -29,12 +29,16 @@ export class LyricsOverlay {
     this.cues = cues;
     this.currentIndex = -1;
     this.currentWordIndex = -1;
-    this.manualMode = false;
+    this.manualMode = true;
+    this.manualIndex = 0;
+    this.manualWordIndex = -1;
     this.status.textContent = filename.replace(/\.lrc$/i, '').slice(0, 32).toUpperCase();
     this.container.classList.toggle('is-empty', !cues.length);
     this.container.classList.remove('is-error');
     this.container.classList.add('is-loaded');
-    this.setVisible(true);
+    this.setVisible(false);
+    this.current.textContent = cues.length ? 'CLIC PARA REVELAR LA LETRA' : 'LETRA NO CARGADA';
+    this.next.textContent = cues.length ? 'La frase aparece solo cuando decides activarla.' : 'No encontré líneas con marcas de tiempo.';
     if (!cues.length) this.showMessage('No encontré líneas con marcas de tiempo. Usa un .LRC con marcas [mm:ss.xx].', true);
   }
 
@@ -86,19 +90,27 @@ export class LyricsOverlay {
 
   advanceManualCue(timeSeconds = 0) {
     if (!this.cues.length) return false;
-    if (!this.manualMode) {
-      this.manualMode = true;
-      this.manualIndex = this.findCueIndex(timeSeconds);
+    this.manualMode = true;
+    if (!this.visible) this.setVisible(true);
+
+    if (this.currentIndex < 0) {
+      this.manualIndex = this.findCueIndex(timeSeconds || 0);
       this.manualWordIndex = -1;
-      this.status.textContent = 'CUE MANUAL · B SIGUIENTE';
+      this.status.textContent = 'CUE MANUAL · CLICK';
     }
-    const words = this.cues[this.manualIndex].text.split(/\s+/);
+
+    const cue = this.cues[this.manualIndex] ?? this.cues[0];
+    const words = cue.text.split(/\s+/);
     this.manualWordIndex += 1;
+
     if (this.manualWordIndex >= words.length) {
       this.manualIndex = Math.min(this.manualIndex + 1, this.cues.length - 1);
       this.manualWordIndex = 0;
     }
+
+    const nextCue = this.cues[this.manualIndex] ?? cue;
     this.renderWord(this.manualIndex, this.manualWordIndex);
+    this.next.textContent = nextCue.text;
     return true;
   }
 
@@ -110,8 +122,7 @@ export class LyricsOverlay {
   }
 
   update(timeSeconds) {
-    if (!this.visible || !this.cues.length || !Number.isFinite(timeSeconds)) return;
-    if (this.manualMode) return;
+    if (!this.visible || !this.cues.length || !Number.isFinite(timeSeconds) || this.manualMode) return;
     const index = this.findCueIndex(timeSeconds);
     if (index < 0) {
       this.currentIndex = -1;

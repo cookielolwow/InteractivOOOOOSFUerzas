@@ -25,13 +25,10 @@ export class CamcorderUI {
     this.rhythmTitleCard.className = 'rhythm-title-card';
     this.rhythmTitleCard.innerHTML = `
       <div class="rhythm-title-sticker">
-        <span class="rhythm-title-small" id="rhythmTitleSmall">RHYTHM HEAVEN</span>
         <strong id="rhythmTitleMain">ON BEAT!</strong>
-        <span class="rhythm-title-sub" id="rhythmTitleSub">KEEP IT TIGHT</span>
       </div>`;
     document.body.appendChild(this.rhythmTitleCard);
     this.rhythmTitleMain = this.rhythmTitleCard.querySelector('#rhythmTitleMain');
-    this.rhythmTitleSub = this.rhythmTitleCard.querySelector('#rhythmTitleSub');
   }
 
   buildDOM() {
@@ -117,6 +114,7 @@ export class CamcorderUI {
             <span><kbd>D</kbd> GIRAR</span>
             <span><kbd>F</kbd> ESTELAS</span>
             <span><kbd>B</kbd> CUE LETRA</span>
+            <span><kbd>I</kbd> FOTO</span>
           </div>
 
           <!-- Primary Expressive Triggers -->
@@ -433,20 +431,18 @@ export class CamcorderUI {
 
   showRhythmTitle(label) {
     const titles = {
-      'BEAT!': ['ON BEAT!', 'KEEP IT TIGHT', 'gold'],
-      'SCATTER!': ['BREAK OUT!', 'PUSH THE SPACE', 'red'],
-      'GATHER!': ['CLOSE IN!', 'MOVE AS ONE', 'blue'],
-      'SPIN!': ['TURN IT!', 'FOLLOW THE FLOW', 'pink'],
-      'TRAIL ON': ['TRAIL ON!', 'LEAVE A TRACE', 'green'],
-      'TRAIL OFF': ['TRAIL CUT!', 'CLEAR THE AIR', 'cream'],
-      'CLOSE IN!': ['CLOSE IN!', 'VOCAL MODE', 'blue'],
-      'BREAK OUT!': ['BREAK OUT!', 'BREAKBEAT MODE', 'red'],
-      'LYRIC CUE': ['LYRIC!', 'NEXT WORD', 'pink'],
-      'AUTO LYRICS': ['AUTO', 'FOLLOWING CLOCK', 'blue']
+      'BEAT!': ['ON BEAT!', 'gold'],
+      'SCATTER!': ['BREAK OUT!', 'red'],
+      'GATHER!': ['CLOSE IN!', 'blue'],
+      'SPIN!': ['TURN IT!', 'pink'],
+      'TRAIL ON': ['TRAIL ON!', 'green'],
+      'TRAIL OFF': ['TRAIL CUT!', 'cream'],
+      'CLOSE IN!': ['CLOSE IN!', 'blue'],
+      'BREAK OUT!': ['BREAK OUT!', 'red'],
+      'AUTO LYRICS': ['AUTO LYRICS', 'blue']
     };
-    const [title, sub, tone] = titles[label] || [label.replace(/!/g, ''), 'RHYTHM CUE', 'gold'];
+    const [title, tone] = titles[label] || [label.replace(/!/g, ''), 'gold'];
     this.rhythmTitleMain.textContent = title;
-    this.rhythmTitleSub.textContent = sub;
     const placements = [[12, 18], [82, 20], [15, 73], [80, 70], [47, 16], [52, 78]];
     const [x, y] = placements[Math.floor(Math.random() * placements.length)];
     this.rhythmTitleCard.style.setProperty('--title-x', `${x}vw`);

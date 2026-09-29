@@ -494,7 +494,7 @@ canvas.main-canvas {
   top: var(--title-y, 50vh);
   display: grid;
   justify-items: center;
-  gap: 2px;
+  gap: 0;
   width: clamp(155px, 23vw, 340px);
   padding: clamp(9px, 1.2vw, 16px) clamp(12px, 2vw, 25px);
   color: #2a1b36;
@@ -504,22 +504,16 @@ canvas.main-canvas {
   clip-path: polygon(1% 7%, 9% 1%, 28% 4%, 43% 0, 57% 4%, 75% 1%, 99% 8%, 96% 91%, 86% 98%, 67% 95%, 51% 100%, 32% 96%, 15% 99%, 0 90%);
   transform: translate(-50%, -50%) rotate(-4deg) scale(.35);
 }
-.rhythm-title-small, .rhythm-title-sub {
-  font: 800 clamp(10px, 1.2vw, 16px) 'Space Mono', monospace;
-  letter-spacing: .18em;
-}
-.rhythm-title-small { color: #b83448; }
 .rhythm-title-card strong {
   font: 900 clamp(27px, 4.2vw, 60px)/.92 'Permanent Marker', 'Arial Black', sans-serif;
   letter-spacing: .01em;
   text-align: center;
   text-shadow: 3px 3px 0 #ffd36f;
 }
-.rhythm-title-sub { padding: 4px 9px; color: #fff9e8; background: #2a1b36; }
-.rhythm-title-card[data-tone="red"] .rhythm-title-sticker { background: #ff6778; box-shadow: 18px 18px 0 #fff0c2, 0 0 0 5px rgba(255,247,225,.5); }
-.rhythm-title-card[data-tone="blue"] .rhythm-title-sticker { background: #7fd1d6; box-shadow: 18px 18px 0 #d84352, 0 0 0 5px rgba(255,247,225,.5); }
-.rhythm-title-card[data-tone="pink"] .rhythm-title-sticker { background: #f77bad; box-shadow: 18px 18px 0 #ffd36f, 0 0 0 5px rgba(255,247,225,.5); }
-.rhythm-title-card[data-tone="green"] .rhythm-title-sticker { background: #a8d9c2; box-shadow: 18px 18px 0 #d84352, 0 0 0 5px rgba(255,247,225,.5); }
+.rhythm-title-card[data-tone="red"] .rhythm-title-sticker { background: #ff6778; box-shadow: 12px 13px 0 #fff0c2; }
+.rhythm-title-card[data-tone="blue"] .rhythm-title-sticker { background: #7fd1d6; box-shadow: 12px 13px 0 #d84352; }
+.rhythm-title-card[data-tone="pink"] .rhythm-title-sticker { background: #f77bad; box-shadow: 12px 13px 0 #ffd36f; }
+.rhythm-title-card[data-tone="green"] .rhythm-title-sticker { background: #a8d9c2; box-shadow: 12px 13px 0 #d84352; }
 .rhythm-title-card.is-playing { animation: rhythmTitleVisible .86s steps(2, end) forwards; }
 .rhythm-title-card.is-playing .rhythm-title-sticker { animation: rhythmTitleJump .78s cubic-bezier(.2, 1.45, .36, 1) forwards; }
 @keyframes rhythmTitleVisible { 0%, 73% { opacity: 1; } 100% { opacity: 0; } }

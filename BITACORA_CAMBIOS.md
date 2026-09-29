@@ -1,142 +1,208 @@
-# Bitácora de Proyecto: Instrumento Visual de Agentes Autónomos
-## Interpretación de "Girl Like Me" — PinkPantheress
+# Bitácora y autoevaluación — Unidad 6: Agentes autónomos
 
-**Estudiante / Performer**: Camila  
-**Curso**: Computación Interactiva  
-**Unidad**: Agentes Autónomos (The Nature of Code, Cap. 5)  
-**Pieza musical**: *"Girl Like Me"* — PinkPantheress (UK Garage / 2-step breakbeat, 138 BPM)  
+## Proyecto
 
----
+- **Instrumento:** visual interactivo para interpretar *Girl Like Me*, de PinkPantheress.
+- **Contexto musical:** UK garage / 2-step; el proyecto usa una referencia de 138 BPM.
+- **Tecnología:** JavaScript, Vite, HTML Canvas 2D y CSS.
+- **Eje de la unidad:** agentes con percepción limitada, steering behaviors, flocking, flow fields e Interactive Physarum.
+- **Estado de esta bitácora:** borrador escrito desde mi proceso y contrastado con el código. Dejé como pendientes los ensayos que todavía tengo que realizar y documentar.
 
-## 1. Concepto y Metáfora Visual
+## Intención y metáfora
 
-Para esta unidad diseñé y construí un **instrumento visual interactivo en la Web** para interpretar en tiempo real la canción **"Girl Like Me"** de PinkPantheress, inspirándome en el lenguaje visual, la estética Y2K cyber-dreamcore y la edición sincopada de su video musical oficial.
+Quiero interpretar los contrastes de la canción entre voz íntima y percusión 2-step. El enjambre funciona como una multitud de recortes: cada pieza responde a su vecindad y a las huellas que dejan las demás. Las fuerzas de cohesión pueden producir sensación de cercanía; la separación, aperturas y rupturas; el campo de flujo, corrientes; y Physarum, caminos que se refuerzan y luego se evaporan.
 
-En lugar de crear una animación pasiva o delegar la reactividad a un analizador de audio automático (FFT), la obra sitúa a la **persona en el ciclo de interpretación**: el intérprete escucha la música, observa la emergencia del enjambre y decide en directo cuándo y cómo intervenir las fuerzas, los límites perceptuales y el ritmo de escalado de los agentes a través de una **Partitura Visual (Visual Score)**.
+El escenario usa tartán, fotografías recortadas y capas de ciudad londinense para relacionar la imagen con PinkPantheress y el contexto británico. La escenografía acompaña la lectura del movimiento; las posiciones futuras de los agentes no están dibujadas como una coreografía fija.
 
-### Estética Y2K / PinkPantheress
-- **Paleta Cromática**: Baby Pink (`#FF70A6`), Fucsia Neón (`#FF007F`), Lavanda Cyber (`#D8B4FE`) y Blanco Perla (`#FFFFFF`) sobre un fondo abisal violeta oscuro (`#0A0310`).
-- **Morfología de Agente**: Destellos de 4 puntas (*sparkle stars*) característicos del diseño gráfico nostálgico de los años 2000.
-- **El Escalado Rítmico Cuantizado (*Stepped Scaling*)**: En el video musical de *Girl Like Me*, los zooms y cortes no son transiciones analógicas lentas; avanzan por saltos sincopados en escalones (*stutters*). El instrumento implementa este fenómeno mediante una función de cuantización discreta en 4 niveles de escala, sincronizados con los golpes de caja y bombo del 2-step.
+## Cómo toma decisiones el sistema
 
----
+La autonomía ocurre en dos niveles distintos:
 
-## 2. Fundamentación de Agentes Autónomos
+1. **Cada agente decide su siguiente movimiento localmente.** Mantiene posición, velocidad y aceleración; observa vecinos dentro de un radio limitado; calcula separación, alineación y cohesión; consulta la dirección del flow field en su posición; y compara tres muestras de la estela Physarum delante de sí. Con esa información ajusta velocidad y rumbo. No hay un agente líder que dicte la trayectoria de todo el grupo.
+2. **Yo conduzco la interpretación musical.** Escucho y decido cuándo cambiar de sección, marcar un golpe, dispersar o reunir el grupo, cambiar el flujo y activar o desactivar las estelas. Mis intervenciones cambian parámetros o añaden impulsos; después, los agentes siguen calculando sus propias respuestas.
 
-El sistema modela un colectivo de más de 300 agentes que combinan estrictamente la paleta algorítmica exigida: **Steering Behaviors (Craig Reynolds)**, **Flocking (Boids)**, **Flow Fields (Campos de Flujo)** e **Interactive Physarum (Quimioatracción y Difusión de Moho)**.
+En forma resumida, la fuerza base que combina el enjambre es:
 
-### A. Percepción Limitada del Agente
-Ningún agente posee una visión global del espacio ni acata órdenes de un líder central:
-1. **Radio de Percepción (\(r_{percept}\))**: Cada agente solo registra a los vecinos situados a una distancia menor a \(r_{percept}\) (ajustable en vivo de 30 a 180 px).
-2. **Radio de Separación (\(r_{sep}\))**: Umbral crítico de proximidad para evitar colisiones.
-3. **Sensores Angulares Physarum**: Cada agente proyecta 3 puntos sensores al frente (\(-\theta_{sensor}, 0, +\theta_{sensor}\)) a una distancia de prospección \(d_{sensor}\) para percibir el gradiente de intensidad de la estela química sobre el lienzo.
-4. **Muestreo de Campo**: Consulta las coordenadas locales \((x, y)\) en la malla del Flow Field.
+```text
+F = w_sep · F_sep + w_ali · F_ali + w_coh · F_coh + w_flow · F_flow
+```
 
-### B. Cálculo de Acción y Leyes de Steering
-Cada agente calcula su fuerza resultante sumando las intenciones locales, ponderadas por los controles expresivos del intérprete:
+Physarum modifica el rumbo al comparar sus muestras izquierda, centro y derecha. Los gestos de teclado o puntero agregan fuerzas temporales, y el golpe rítmico activa un resorte visual y un pequeño impulso. Por eso, el movimiento no depende de una secuencia de posiciones prescritas.
 
-$$\vec{F}_{\text{total}} = w_{sep}\vec{F}_{sep} + w_{ali}\vec{F}_{ali} + w_{coh}\vec{F}_{coh} + w_{flow}\vec{F}_{flow} + \vec{F}_{beat}$$
+### Evidencia en el código
 
-La fuerza de beat aparece solo cuando la persona marca un golpe con el teclado. No hay una fuerza de cursor ni un objetivo que persiga el puntero. Physarum orienta el rumbo al consultar la concentración local de estelas.
+| Idea | Dónde se puede localizar | Qué hace |
+|---|---|---|
+| Estado de cada agente | `src/agents/Boid.js`, constructor y `update()` | Conserva posición, velocidad, aceleración y límites de movimiento. |
+| Percepción local y flocking | `Boid.js`, `separate()`, `align()`, `cohere()`; `src/agents/AgentSystem.js`, `getNeighbors()` | Calcula las tres reglas usando vecinos dentro de radios definidos. |
+| Campo de flujo | `src/agents/FlowField.js`, `update()` y `getAngleAt()`; `Boid.js`, `followFlow()` | Genera direcciones con ruido y cada agente consulta la celda correspondiente a su ubicación. |
+| Sensores Physarum | `Boid.js`, `physarumSense()` y `sampleTrail()` | Compara tres puntos adelantados y gira hacia la señal química más intensa. |
+| Depósito, difusión y evaporación | `src/agents/PhysarumTrailBuffer.js` | Los agentes dejan señal, el mapa se difumina y pierde intensidad con el tiempo. |
+| Intervenciones | `src/main.js`, `bindEvents()`; `AgentSystem.js`, `triggerBeat()`, `setInteractionMode()`, `interactAt()` | Teclas y clics cambian temporalmente el sistema sin asignar una ruta individual. |
 
-1. **Separación (Reynolds)**:
-   $$\vec{F}_{sep} = \sum_{j \neq i, d < r_{sep}} \frac{\vec{p}_i - \vec{p}_j}{|\vec{p}_i - \vec{p}_j|^2}$$
-2. **Alineación (Reynolds)**:
-   $$\vec{F}_{ali} = \text{Steer}\left(\frac{1}{N}\sum_{j=1}^N \vec{v}_j\right)$$
-3. **Cohesión (Reynolds)**:
-   $$\vec{F}_{coh} = \text{Steer}\left(\frac{1}{N}\sum_{j=1}^N \vec{p}_j - \vec{p}_i\right)$$
-4. **Flow Field (Ruido Simplex)**:
-   $$\vec{v}_{flow} = V_{max} \cdot (\cos \alpha(x,y,t), \sin \alpha(x,y,t))$$
-5. **Interactive Physarum (Quimioatracción)**:
-   Los agentes depositan una huella bioluminiscente en un búfer que se evapora con factor \(decay\). Al sensar la izquierda, centro o derecha, ajustan su vector de dirección hacia la mayor concentración:
-   $$\Delta\theta = \begin{cases} -\theta_{rot} & \text{si } S_{left} > S_{right} \\ +\theta_{rot} & \text{si } S_{right} > S_{left} \\ 0 & \text{si } S_{center} > S_{left}, S_{right} \end{cases}$$
+## Controles que uso
 
----
+### Durante la interpretación
 
-## 3. Score Visual (Partitura de Interpretación en Vivo)
+| Control | Qué hago con él |
+|---|---|
+| **Q** o **espacio** | Marco un golpe. Los agentes reciben un impulso breve y la ciudad da un acento de papel. |
+| **A** | Disperso el enjambre con una respuesta breve de separación. |
+| **S** | Reúno el enjambre con una respuesta breve de cohesión. |
+| **D** | Hago girar el gesto y ciclo el flow field por corriente, vórtice y ondas. |
+| **C** | Alterno el peso de cohesión para acercar o soltar el grupo. |
+| **V** | Alterno el peso de separación para abrir o cerrar el espacio entre agentes. |
+| **F** o **T** | Enciendo o apago Physarum: depósito, visualización y consulta de las estelas. |
+| **I** | Elijo el instante del recorte de PinkPantheress. Aparece brevemente en una posición aleatoria; no lo dispara el reloj de la canción. |
+| **Clic en el lienzo** | Aplico en ese punto un gesto que alterna entre dispersar, reunir, girar y volver al movimiento libre. Si cargué una letra, el clic también avanza su cue manual. |
+| **1–6** | Elijo manualmente una sección del score. Si la canción está reproduciéndose, la sección también posiciona el audio en su tiempo inicial. |
 
-| Sección | Tiempo | Pasaje Musical ("Girl Like Me") | Intención Visual | Intervención en Vivo |
-| :--- | :--- | :--- | :--- | :--- |
-| **1. INTRO** | 0:00 - 0:18 | Voz lo-fi solitaria, acordes nostálgicos | Recorte de papel íntimo y reposo | Pulsar `[S]` para agrupar. `[H]` recorre el fragmento didáctico por sílabas. |
-| **2. VERSO 1** | 0:18 - 0:45 | Entra la base 2-step a 138 BPM | Taxi recortado, ciudad y golpes de cámara | Marcar la caja con `[Q]` o `[ESPACIO]`; pulsar `[D]` para cambiar el campo. |
-| **3. CORO 1** | 0:45 - 1:12 | Clímax vocal eufórico, percusión brillante | Remolino fucsia y dispersión | Presionar `[A]` para dispersar y `[F]` para estelas Physarum. |
-| **4. PUENTE** | 1:12 - 1:40 | Filtro pasa-bajos, juego rítmico sincopado | Puente, letreros y recortes urbanos | Pulsar `[D]` y escuchar cómo cambian las trayectorias del campo. |
-| **5. CORO 2** | 1:40 - 2:05 | Doble energía, bajo garage saturado | Escenario de miniaturas y color contrastado | Alternar `[S]` y `[A]` en contratiempo; marcar acentos con `[Q]`. |
-| **6. OUTRO** | 2:05 - 2:25 | Desvanecimiento de la voz | Taxi y ciudad en disolución de papel | Bajar la intensidad manualmente y dejar que las estelas se evaporen. |
+### Audio, letra y presentación
 
-Las teclas `[1]` a `[6]` cambian manualmente de sección. El reloj puede seguir el audio, pero ni el score ni la paleta saltan de sección por sí solos: escucho la música y decido cuándo intervenir.
+| Control | Qué hago con él |
+|---|---|
+| **L** o botón de canción | Reproduzco o pauso *Girl Like Me*. También puedo cargar otro archivo de audio desde el panel. |
+| **P** o botón de base 2-step | Enciendo o apago el acompañamiento sintético de 138 BPM. |
+| **J** o botón **LETRA** | Muestro u oculto la proyección de la letra `.LRC`. |
+| **B** | Avanzo manualmente palabra por palabra en la letra y paso al modo manual. |
+| **N** | Devuelvo la letra al seguimiento de su reloj `.LRC`. |
+| **H** | Avanzo por el fragmento breve de estudio del fraseo. |
+| **M** o **F2** | Oculto o muestro el HUD. |
+| Botón **FULLSCREEN** | Presento el instrumento a pantalla completa. |
+| **R** | Reinicio la distribución del enjambre y limpio sus estelas. |
 
----
+### Panel **PARÁMETROS**
 
-## 4. Controles del Instrumento
+Uso sus controles para hacer pruebas, no como acciones que tenga que pulsar constantemente durante el performance:
 
-- <kbd>Q</kbd> / <kbd>ESPACIO</kbd>: **Golpe rítmico** con un pulso de cámara centrado.
-- <kbd>A</kbd> / <kbd>S</kbd> / <kbd>D</kbd> / <kbd>F</kbd>: **Dispersar / agrupar / cambiar Flow Field / estelas**.
-- <kbd>H</kbd>: Avanza entre las cuatro unidades silábicas del fragmento didáctico; indica conteo, acento y fraseo.
-- <kbd>L</kbd> / Botón `PLAY`: **Reproduce / Pausa la canción oficial "Girl Like Me"** (cargada desde `src/sonido/`).
-- <kbd>C</kbd>: **Cohesión Vocal** (conecta y comprime el enjambre hacia la voz).
-- <kbd>V</kbd>: **Separación Breakbeat** (explosión centrífuga de partículas en los drops).
-- <kbd>C</kbd> / <kbd>V</kbd>: Atajos alternos para cambiar cohesión y separación.
-- <kbd>T</kbd>: Atajo alterno para encender y apagar estelas Physarum.
-- <kbd>1</kbd> a <kbd>6</kbd>: Selección manual de la sección de la Partitura Visual.
-- <kbd>P</kbd>: Activa/desactiva la base metrónomo 2-step sintética (138 BPM).
-- <kbd>M</kbd>: Oculta/muestra la interfaz visual (Modo Performance pura).
-- <kbd>F11</kbd> / Botón UI: Pantalla Completa.
+- **Radio de percepción:** 30–180 px; cambia cuántos vecinos puede considerar cada agente.
+- **Radio de separación:** 10–80 px; cambia el umbral de proximidad para evitar choques.
+- **Fuerza máxima de Reynolds:** 0.05–0.5; limita el tamaño de los cambios de velocidad.
+- **Velocidad máxima:** 1.5–8; limita la rapidez de los agentes.
+- **Evaporación de Physarum:** 0.02–0.20; cambia qué tan rápido se debilita la memoria de las estelas.
+- **Cantidad de agentes:** 80–600; cambia el tamaño del colectivo.
+- **Mostrar vectores del flow field:** activa la visualización de diagnóstico del campo.
 
----
+También puedo usar los botones del dock para golpear, cambiar cohesión o separación, rotar el flow field y encender o apagar las estelas.
 
-## 5. Autoevaluación Sustentada (100 / 100)
+## Iteraciones y decisiones de diseño
 
-### 1. Cumplimiento del encargo: 25 / 25
-- **Evidencia**: El instrumento fue construido íntegramente con tecnologías web modernas (Vite, HTML5 Canvas 2D de alto rendimiento con búfer de estelas, ES Modules y CSS3 responsive).
-- Funciona en tiempo real a 60 FPS estables con más de 320 agentes simultáneos.
-- Dispone de modo pantalla completa y está diseñado específicamente para interpretar *"Girl Like Me"* de PinkPantheress, con soporte para reproducir la canción o una base sintética de referencia a 138 BPM.
+### 1. Del sistema de partículas al instrumento
 
-### 2. Comprensión y verificación: 25 / 25
-- **Evidencia**: Cada agente calcula su movimiento únicamente a partir de información local percibida (vecindad dentro de \(r_{percept}\), muestreo vectorial del Flow Field y gradiente químico con 3 sensores tipo Physarum).
-- No hay líderes centrales ni trayectorias predefinidas.
-- Se implementó y verificó en código la fórmula de Reynolds \(\vec{F} = \vec{v}_{\text{deseada}} - \vec{v}_{\text{actual}}\), así como la cuantización discreta del escalado rítmico que reproduce el efecto visual del video musical.
-- Es posible predecir y comprobar en tiempo real cómo la variación de \(r_{percept}\), \(r_{sep}\) o el decaimiento de estelas altera radicalmente la morfología del sistema.
+**Decisión:** relacionar los comportamientos con partes de la música en vez de usar las partículas como decoración independiente.
 
-### 3. Diseño e intención: 25 / 25
-- **Evidencia**: Cada comportamiento algorítmico responde a una necesidad expresiva de la canción:
-  - La cohesión modela la intimidad y fragilidad vocal de PinkPantheress.
-  - La separación representa la fuerza de choque de los breakbeats de UK Garage.
-  - El flow field traduce las corrientes sincopadas del bajo.
-  - El Physarum genera las redes orgánicas bioluminiscentes que evocan la estética cyber-fairy y de ensueño Y2K del video musical.
-- La identidad visual (destellos de 4 puntas, paleta pastel rosa/neón/lavanda y HUD de videocámara retro) es consistente de principio a fin.
+**Resultado visible en el prototipo:** existen controles separados para golpes, cohesión, dispersión, cambio de campo y estelas. El score presenta seis secciones con una intención y una sugerencia de intervención.
 
-### 4. Interpretación humana: 25 / 25
-- **Evidencia**: Se descartó conscientemente cualquier automatismo por FFT o micrófono. El instrumento depende de la escucha atenta y las decisiones en vivo del ejecutante.
-- El **Score Visual** y los controles expresivos permiten conducir la pieza en vivo, anticipar los pasajes musicales y reaccionar elásticamente a los patrones emergentes del colectivo.
-- Se dispone de una interfaz con HUD retro de videocámara que guía al ejecutante en cada sección y permite ocultar todos los elementos visuales con la tecla `M` para una presentación limpia en escena.
+**Por comprobar en ensayo:** si puedo distinguir auditivamente los pasajes y elegir el control adecuado sin depender de leer el HUD.
 
-### Actualización de referencias visuales y guía de letra
-- Los videos se usan como referentes de lenguaje visual: montaje de collage, palabras de alto contraste, taxis y buses londinenses, bloques geométricos y pequeñas escenas enmarcadas. El instrumento reconstruye estos recursos con dibujo propio; no incorpora los videos.
-- Una tarjeta de estudio divide un fragmento breve en cuatro partes y permite avanzar manualmente con `[H]`. Es una ayuda de escucha y acentuación, no una transcripción completa ni una secuencia automática.
-- La bailarina de papel cambia de pose cuando la persona pulsa una tecla rítmica. La paleta cambia cuando quien interpreta selecciona otra sección.
-- Esta revisión refuerza el requisito de interpretación humana: el audio no analiza ni dispara las decisiones visuales y el score no cambia de sección automáticamente.
+### 2. Dirección de arte: collage británico
 
-### Revisión de proyección, partículas y sincronía de escena (29 de septiembre de 2026)
+**Iteración motivada por:** las formas geométricas y las placas blancas no se sentían como recortes de papel; el tartán y la ciudad debían tener mayor presencia.
 
-- Se añadió una capa de lyric video que lee un archivo `.LRC` elegido por quien interpreta. Cada marca de tiempo selecciona la línea activa y la capa revela las palabras progresivamente hasta la siguiente marca. La letra no se descarga ni viene incluida; el reloj de reproducción sincroniza el texto.
-- La tecla `[J]` controla la capa de letra y `[M]` / `[F2]` ocultan o muestran los controles del HUD. La proyección de la letra se mantiene independiente del HUD para poder limpiar la pantalla durante la presentación.
-- El paisaje usa el reloj de reproducción y el BPM para desplazar la ciudad y dar acentos de color por compás, con pequeños rebotes de casas, taxi, bus, puente y cabina telefónica. El color de la escena se anima automáticamente; el cambio de sección y los parámetros de los agentes siguen siendo decisiones manuales.
-- Los cuatro tipos de agentes ahora tienen formas legibles asociadas a voz, bajo, caja y hi-hat. Separación, alineación y cohesión siguen actuando sobre vecindades locales; el agente toma muestras del flow field y de la concentración química Physarum.
-- Se incorporó difusión espacial real al búfer de estelas y el peso de Physarum modula cuánto gira el agente hacia las señales químicas. Así, encender el rastro afecta tanto la composición como la percepción local.
-- La bailarina conserva la estética de recortes, alterna poses con el pulso y ya no muestra un rótulo de personaje.
-- Para ensayar: cargar la canción, cargar su `.LRC`, ocultar el HUD con `[M]` / `[F2]` y mostrar la letra con `[J]`. En el ensayo, comprobar la alineación de los primeros versos; algunos LRC requieren un pequeño ajuste de offset según la edición del audio.
+**Decisión:** usar un patrón tartán como fondo, fotografía con transparencia y skyline repetido en capas que avanzan a distintas velocidades. Los vehículos y retratos se tratan como recortes con inclinación por pasos, no como tarjetas blancas opacas.
 
-### Golpe performativo y legibilidad del movimiento
+**Control performativo del retrato:** al principio los destellos estaban programados para aparecer según el reloj musical. Para decidir yo el instante, los cambié a una tecla dedicada: `[I]` muestra el recorte durante un tiempo corto en una posición aleatoria. El tartán cambia de paleta cuando selecciono una sección. El paisaje conserva su deriva continua como escenografía, pero esos adornos ya no marcan una secuencia musical por su cuenta.
 
-- Las teclas de interpretación producen ahora una tarjeta de título de corta duración: `ON BEAT!`, `BREAK OUT!`, `CLOSE IN!`, `TURN IT!` o `TRAIL ON/OFF`. Son señales visuales originales para la ejecución; cada una traduce la intención de la acción sin fijar una trayectoria para los agentes.
-- Cada golpe suma un impulso hacia la izquierda al fondo. Las capas lejanas, cercanas y los vehículos recorren distancias diferentes, por lo que el paisaje conserva paralaje. Las casas, puente, taxi, bus y cabina hacen un rebote corto con compresión vertical y expansión horizontal.
-- Se reemplazó el salto de escala inestable de los agentes por un resorte amortiguado: impacto ancho y bajo, estiramiento en la dirección del movimiento y retorno a la forma base. El desplazamiento continúa calculándose a partir de vecinos, flow field y sensores Physarum; el gesto visual no prescribe su recorrido.
+**Evidencia:** `src/background.js`, funciones `makeTartanTile()`, `drawTartan()`, `drawMovingCity()`, `drawImageCutout()` y `drawPortraitCue()`.
 
-### Rediseño como visual de concierto
+### 3. Feedback rítmico y legibilidad
 
-- La capa de letra ya no usa un panel central. Cada línea entra como una serie de recortes tipográficos situados en distintos planos de la pantalla; las palabras se revelan durante la duración de su marca `.LRC` y luego cambian de posición en la línea siguiente.
-- Se retiró del render el escenario de la bailarina para liberar la composición. El fondo incorpora haces de luz, bloom dibujado en canvas y una audiencia de siluetas para leer el sistema como proyección de concierto.
-- El color de la escenografía se interpola continuamente entre cuatro tintes durante cada bloque de ocho pulsos. No cambia el score: las secciones y las reglas de los agentes continúan bajo conducción humana.
-- Se reajustó la letra al audio local de 2:24 y a los rangos del score. El reloj que selecciona la línea sigue siendo `audioElement.currentTime`, por lo que inicia en el mismo cero del MP3 al presionar play.
-- El modo manual de letra usa `[B]`: cada pulsación revela solo la siguiente palabra como un recorte tipográfico. `[N]` vuelve al seguimiento por reloj. Este control permite acomodar la proyección a la interpretación humana cuando el fraseo cambia durante el ensayo.
+**Iteración motivada por:** las partículas se percibían poco y las ondas circulares del golpe competían con la estética de collage.
+
+**Decisión:** retirar las ondas circulares del feedback y usar golpes cortos de papel rasgado. Las partículas tienen relleno con contornos claro y oscuro para separarse del tartán y de las imágenes.
+
+**Evidencia:** `AgentSystem.render()` dibuja los agentes y evita las ondas circulares; `FancyBackground.drawPaperHitFeedback()` crea el feedback de recorte; `Boid.draw()` aplica los dos contornos.
+
+### 4. Interacción y autonomía
+
+**Decisión:** hacer que los clics alternen entre dispersión, agrupación, órbita y retorno al movimiento libre. Las teclas A, S y D ofrecen acceso directo a tres de esos gestos. La fuerza del gesto decae, de modo que el movimiento colectivo vuelve a depender de las reglas locales.
+
+**Evidencia:** `AgentSystem.interactAt()`, `setInteractionMode()` y el cálculo de `gestureFx` / `gestureFy` dentro de `update()`.
+
+**Aprendizaje:** un control humano puede cambiar las condiciones iniciales o el peso de las reglas sin convertirse en un director que dicte la trayectoria de cada partícula.
+
+### 5. Optimización para la proyección
+
+**Problema reportado durante la iteración:** la animación se sentía trabada.
+
+**Cambios realizados:** el mapa de estelas se procesa a media resolución por eje; el campo de flujo se recalcula en fotogramas alternos; las sombras de los recortes se preparan en caché, y se quitó el desenfoque individual de cada depósito de partícula.
+
+**Evidencia de verificación disponible:** `npm run build` terminó correctamente en la iteración del 29 de septiembre de 2026. Esto confirma la compilación, pero no demuestra por sí mismo una tasa concreta de FPS ni fluidez en el equipo de presentación.
+
+## Partitura de interpretación
+
+La tabla es una guía de escucha, no una secuencia ejecutada automáticamente. Si durante el performance la canción pide otra respuesta, puedo sostener el estado actual o elegir otra intervención.
+
+| Sección | Pasaje / intención | Posible intervención humana |
+|---|---|---|
+| Intro, 0:00–0:18 | Voz íntima; buscar un grupo cercano y menos agitado. | S para reunir; dejar que las estelas se acumulen. |
+| Verso 1, 0:18–0:45 | Entra el 2-step; escuchar el pulso y observar las corrientes. | Q o espacio para marcar golpes; D para cambiar el modo del campo. |
+| Coro 1, 0:45–1:12 | Aumenta la energía; abrir el enjambre. | A para dispersar; F o T para cambiar las estelas. |
+| Puente, 1:12–1:40 | Contraste y cortes; explorar trayectorias sinuosas. | D para cambiar el flujo; esperar y observar antes de volver a golpear. |
+| Coro 2, 1:40–2:05 | Reaparece el clímax; alternar expansión y reunión. | Alternar A y S según lo que escuche; Q para acentuar. |
+| Outro, 2:05–2:25 | Dejar espacio al final de la canción y observar la evaporación. | Reducir intervenciones y dejar que las estelas decaigan. |
+
+## Registro de pruebas y ensayos
+
+No registro como observación algo que todavía no he comprobado. Completaré las celdas vacías con fecha, condiciones y una captura o video corto del prototipo.
+
+| Prueba | Predicción antes de probar | Observación real / evidencia |
+|---|---|---|
+| Bajar radio de percepción y subirlo después (control Parámetros). | Con menor radio, cada agente consulta menos vecinos; el grupo debería perder coordinación local. Al aumentarlo, separación, alineación y cohesión deberían considerar más agentes. | **Pendiente:** anotar valores, cambio visible y captura. |
+| Cambiar fuerza de cohesión con S / control del panel. | Una cohesión mayor debería aumentar la tendencia de los agentes a dirigirse al promedio de posiciones de sus vecinos; no debería fijar un centro absoluto. | **Pendiente:** anotar antes/después y si la predicción se cumplió. |
+| Cambiar modo del flow field con D. | Aunque el campo cambie, cada agente debería seguir una dirección local distinta según su posición. Las trayectorias deberían variar sin volverse idénticas. | **Pendiente:** comparar modos y guardar captura del overlay si se activa. |
+| Desactivar y reactivar estelas con F/T. | Al apagarlas, los agentes dejan de depositar y consultar el campo químico; al encenderlas, el depósito, la difusión, la evaporación y los sensores vuelven a influir en el rumbo. | **Pendiente:** anotar diferencia en trayectoria y visibilidad. |
+| Usar clic y observar el retorno. | El gesto afectará agentes próximos al punto; al decaer la fuerza temporal, el flocking y el campo volverán a dominar. | **Pendiente:** describir el efecto y cuánto tarda en volver al comportamiento base. |
+| Probar el modo de pantalla completa durante la canción. | El HUD se debería poder ocultar y el canvas continuar ocupando la pantalla. | **Pendiente:** registrar navegador, resolución y cualquier caída de fluidez. |
+
+## Autoevaluación provisional
+
+Esta calificación es un **borrador para revisar después del ensayo**. No asigno puntaje completo a la comprensión o a la interpretación hasta registrar las pruebas anteriores y poder defenderlas oralmente.
+
+### 1. Cumplimiento del encargo — 22 / 25 (provisional)
+
+Construí el instrumento con tecnologías web para acompañar en tiempo real una canción que elegí. Tiene controles de interpretación y opción de pantalla completa. La compilación de producción pasó. Me faltan evidencias de una ejecución completa en la resolución y el equipo del performance, incluida una comprobación de fluidez.
+
+**Evidencias:** `src/main.js` (canvas, bucle de animación y controles); `src/ui/camcorderUI.js` (botón de pantalla completa y controles); compilación de Vite (`npm run build`, 29/09/2026).
+
+### 2. Comprensión y verificación — 18 / 25 (provisional)
+
+Puedo ubicar el estado, las reglas de flocking, el campo de direcciones y los sensores de Physarum en módulos separados. La interfaz permite cambiar parámetros comunes. Sin embargo, aún debo completar la tabla de pruebas con predicción, observación y evidencia para demostrar que puedo anticipar y verificar los cambios.
+
+**Evidencias:** `Boid.js`, `AgentSystem.js`, `FlowField.js`, `PhysarumTrailBuffer.js` y controles del panel en `camcorderUI.js`.
+
+### 3. Diseño e intención — 21 / 25 (provisional)
+
+La combinación entre cohesión, dispersión, flow fields y estelas ofrece una metáfora que puedo relacionar con voz, breakbeat, corrientes y memoria química. El tartán, las fotografías y los recortes hacen reconocible el contexto visual. Me falta documentar, con una grabación o notas de ensayo, qué combinación funciona mejor para cada pasaje y qué ajustes hice a partir de lo observado.
+
+**Evidencias:** score de seis secciones en `src/visualScore.js`; dirección de arte en `src/background.js`; formas y reglas en `src/agents/Boid.js`.
+
+### 4. Interpretación humana — 21 / 25 (provisional)
+
+Las secciones se seleccionan manualmente con 1–6 y hay controles de gesto, golpe y estelas. Los clics cambian temporalmente el comportamiento alrededor del punto elegido. La tecla I deja en mis manos el momento del recorte fotográfico, y la selección de sección controla la paleta. El reloj de canción puede sincronizar la letra si la uso; el cue B permite controlarla manualmente. Debo mostrar en el ensayo que escucho y decido cuándo intervenir, sin seguir el score de forma automática.
+
+**Evidencias:** `src/main.js` (teclas, puntero y selección de sección), `src/visualScore.js` (el score no avanza de sección por sí solo), `src/ui/lyricsOverlay.js` (modo automático y control manual de letra).
+
+### Puntaje de trabajo: 82 / 100 — revisar tras el ensayo
+
+Este total no es una nota certificada. Debo ajustar cada criterio según las pruebas que realice y las evidencias que pueda mostrar en la presentación.
+
+## Pendientes antes de entregar
+
+- [ ] Ejecutar y registrar las pruebas de percepción, cohesión, flow field y Physarum.
+- [ ] Ensayar la pieza completa con las secciones elegidas en vivo; registrar qué decidí y por qué.
+- [ ] Capturar evidencia del modo de pantalla completa y de dos cambios perceptibles de parámetros.
+- [ ] Comprobar fluidez en el equipo y navegador de presentación; no afirmar “60 FPS estables” sin medirlo.
+- [ ] Ensayar cuándo usar I, A/S/D y Q para que los recortes y cambios del enjambre respondan a decisiones que tomo al escuchar.
+- [ ] Si proyecto letra sincronizada, probar también el cue manual B para decidir cuál modo apoya mejor mi interpretación.
+- [ ] Añadir a esta bitácora la fecha y una reflexión personal después del ensayo.
+
+## Referencias de consulta
+
+- Shiffman, Daniel. [The Nature of Code, capítulo 5: Autonomous Agents](https://natureofcode.com/autonomous-agents/).
+- Reynolds, Craig. [Steering Behaviors For Autonomous Characters](https://www.red3d.com/cwr/papers/1999/gdc99steer.html).
+- Hobbs, Tyler. [Flow Fields](https://www.tylerxhobbs.com/words/flow-fields).
+- Bleuje. [Algorithms for making interesting organic simulations (Physarum)](https://bleuje.com/physarum-explanation/).
+- Patt Vira. [Slime Molds (Physarum), tutorial con p5.js](https://www.pattvira.com/coding-tutorials/v/slime-molds-physarum).
+
+Consulto estas referencias para explicar los principios. En mi bitácora registro también qué probé, qué predije y qué observé en este prototipo.

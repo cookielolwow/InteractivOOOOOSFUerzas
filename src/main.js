@@ -25,7 +25,7 @@ class VisualInstrumentApp {
     this.height = window.innerHeight;
 
     // Initialize Autonomous Agents Swarm
-    this.agentSystem = new AgentSystem(this.width, this.height, 320);
+    this.agentSystem = new AgentSystem(this.width, this.height, 240);
 
     // Initialize Musical Visual Score
     this.visualScore = new VisualScore(this.agentSystem);
@@ -77,6 +77,14 @@ class VisualInstrumentApp {
 
   bindEvents() {
     window.addEventListener('resize', () => this.initCanvas());
+
+    window.addEventListener('pointerdown', (event) => {
+      if (event.target instanceof HTMLElement && event.target.closest('button, input, select, textarea, label, .hud-btn, .trigger-btn, .audio-btn')) {
+        return;
+      }
+      this.lyricsOverlay.advanceManualCue(this.visualScore.currentTime);
+      this.agentSystem.interactAt(event.clientX, event.clientY);
+    });
 
     // Keyboard is the primary performance surface; holding a key never repeats hits.
     window.addEventListener('keydown', (e) => {
@@ -162,8 +170,7 @@ class VisualInstrumentApp {
 
       // [B]: performer advances one lyric cube; [N] returns to clock-following mode.
       if (key === 'B') {
-        this.lyricsOverlay.advanceManualCue(songTime ?? this.visualScore.currentTime);
-        this.ui.showRhythmHit('LYRIC CUE');
+        this.lyricsOverlay.advanceManualCue(this.audioCompanion.getSongTime() ?? this.visualScore.currentTime);
       }
       if (key === 'N') {
         this.lyricsOverlay.setAutomaticMode();
@@ -181,6 +188,7 @@ class VisualInstrumentApp {
 
       // Four rhythm actions shown on screen: scatter, gather, spin, trail flare.
       if (key === 'A') {
+        this.agentSystem.setInteractionMode('scatter');
         this.camera.scale = 1.15; this.camera.shake = 25; this.camera.targetAngle = 0.05; setTimeout(() => this.camera.targetAngle = 0, 150);
         this.agentSystem.params.separationWeight = 4.0; 
         setTimeout(() => this.agentSystem.params.separationWeight = 1.0, 200); 
@@ -189,6 +197,7 @@ class VisualInstrumentApp {
         this.ui.showRhythmHit('SCATTER!');
       }
       if (key === 'S') {
+        this.agentSystem.setInteractionMode('gather');
         this.camera.scale = 0.85; this.camera.shake = 15;
         this.agentSystem.params.cohesionWeight = 3.0; 
         setTimeout(() => this.agentSystem.params.cohesionWeight = 0.8, 200); 
@@ -197,6 +206,7 @@ class VisualInstrumentApp {
         this.ui.showRhythmHit('GATHER!');
       }
       if (key === 'D') {
+        this.agentSystem.setInteractionMode('orbit');
         this.camera.targetAngle = 0.2; this.camera.scale = 1.1; setTimeout(() => this.camera.targetAngle = 0, 300);
         const modes = ['stream', 'swirl', 'waves'];
         const current = this.agentSystem.flowField.mode;
@@ -205,6 +215,11 @@ class VisualInstrumentApp {
         this.agentSystem.triggerBeat(1.0); 
         if(this.background) this.background.triggerBeatRing(this.width/2, this.height/2, '#D4A853');
         this.ui.showRhythmHit('SPIN!');
+      }
+      // [I]: performer-triggered PinkPantheress paper-photo flash.
+      if (key === 'I') {
+        this.background.triggerPortraitFlash();
+        this.ui.showRhythmHit('PHOTO CUT!');
       }
       if (key === 'F') this.camera.shake = 8;
     });
@@ -253,7 +268,7 @@ class VisualInstrumentApp {
       // 3. Clear Screen & Render Background
       this.ctx.clearRect(0, 0, this.width, this.height);
       if (this.background) {
-        this.background.update(currentTime, this.agentSystem.globalBeatPulse, musicTime, this.audioCompanion.bpm);
+        this.background.update(currentTime, this.agentSystem.globalBeatPulse);
         this.background.render(this.ctx);
       } else {
         this.ctx.fillStyle = '#0A0310';

@@ -38,18 +38,17 @@ export class AgentSystem {
       quantizeSteps: 4 // Stepped scaling quantization levels
     };
 
-    // Shockwave system
-    this.shockwaves = [];
-
     // Beat Pulse / Stepped Scale state
     this.globalBeatPulse = 0;
     this.beatCounter = 0;
+    this.interactionMode = 'drift';
+    this.interactionCenter = { x: width * .5, y: height * .5 };
+    this.interactionTime = 0;
+    this.interactionStrength = 0;
+    this.clickModeIndex = 0;
+    this.flowUpdateFrame = 0;
 
     this.initAgents();
-  }
-
-  addShockwave(x, y, power, color) {
-    this.shockwaves.push({x, y, power, radius: 0, maxRadius: 400, color, active: true});
   }
 
   initAgents() {
@@ -113,6 +112,33 @@ export class AgentSystem {
     }
   }
 
+  setInteractionMode(mode, x = this.width * .5, y = this.height * .5, duration = 2.8) {
+    this.interactionMode = mode;
+    this.interactionCenter = { x, y };
+    this.interactionTime = duration;
+    this.interactionStrength = 1;
+    if (mode === 'orbit') this.flowField.triggerSwirl(x, y, 2.2);
+    if (mode === 'gather') this.flowField.triggerSwirl(x, y, 1.1);
+  }
+
+  interactAt(x, y) {
+    const modes = ['scatter', 'gather', 'orbit', 'drift'];
+    const mode = modes[this.clickModeIndex++ % modes.length];
+    this.setInteractionMode(mode, x, y, mode === 'drift' ? 1.1 : 3.2);
+    const radius = Math.min(this.width, this.height) * .38;
+    for (const agent of this.agents) {
+      const dx = agent.x - x, dy = agent.y - y;
+      const distance = Math.hypot(dx, dy);
+      if (distance < radius && distance > 0.01) {
+        const direction = mode === 'gather' ? -1 : 1;
+        const impulse = (1 - distance / radius) * (mode === 'orbit' ? .95 : .75);
+        const angle = mode === 'orbit' ? Math.atan2(dy, dx) + Math.PI * .5 : Math.atan2(dy, dx);
+        agent.applyForce(Math.cos(angle) * impulse * direction, Math.sin(angle) * impulse * direction);
+        agent.triggerBeatStep(.45 + impulse * .5);
+      }
+    }
+  }
+
   // Update Spatial Partitioning Grid
   updateGrid() {
     this.grid.clear();
@@ -158,7 +184,11 @@ export class AgentSystem {
   // Update whole swarm
   update(time, delta = 1.0) {
     // 1. Update Flow Field
-    this.flowField.update(time);
+    // Flow fields drift slowly; recomputing the full noise grid every other
+    // frame is visually indistinguishable and frees time for the flock.
+    if ((this.flowUpdateFrame++ & 1) === 0) this.flowField.update(time);
+    this.interactionTime = Math.max(0, this.interactionTime - delta / 60);
+    this.interactionStrength = Math.min(1, this.interactionTime / .7);
 
     // 2. Diffuse & Evaporate Physarum chemical trail map
     this.trailBuffer.decayRate = this.params.trailDecay;
@@ -175,18 +205,6 @@ export class AgentSystem {
     } else {
       this.globalBeatPulse = 0;
     }
-
-    // 4b. Update Shockwaves
-    for (let i = 0; i < this.shockwaves.length; i++) {
-      let wave = this.shockwaves[i];
-      if (wave.active) {
-        wave.radius += 20 * delta;
-        if (wave.radius >= wave.maxRadius) {
-          wave.active = false;
-        }
-      }
-    }
-    this.shockwaves = this.shockwaves.filter(w => w.active);
 
     // 5. Update each autonomous agent
     const {
@@ -213,24 +231,28 @@ export class AgentSystem {
       // B) Flow Field force
       const flow = boid.followFlow(this.flowField);
 
-      // C) Physarum chemotaxis sensing (steers heading towards trail concentrations)
-      if (physarumWeight > 0.05 && trailData) {
-        boid.physarumSense(trailData, this.width, this.height, physarumWeight);
+      // Click/keyboard gesture modes briefly steer the flock as a whole. The
+      // falloff leaves the interaction local and lets the autonomous motion return.
+      let gestureFx = 0, gestureFy = 0;
+      if (this.interactionTime > 0.01 && this.interactionMode !== 'drift') {
+        const dx = boid.x - this.interactionCenter.x;
+        const dy = boid.y - this.interactionCenter.y;
+        const distance = Math.hypot(dx, dy);
+        const radius = Math.min(this.width, this.height) * .46;
+        if (distance > 1 && distance < radius) {
+          const falloff = (1 - distance / radius) * this.interactionStrength;
+          let angle = Math.atan2(dy, dx);
+          if (this.interactionMode === 'gather') angle += Math.PI;
+          if (this.interactionMode === 'orbit') angle += Math.PI * .5;
+          gestureFx = Math.cos(angle) * falloff * .42;
+          gestureFy = Math.sin(angle) * falloff * .42;
+        }
       }
 
-      let shockwaveFx = 0;
-      let shockwaveFy = 0;
-      for (let j = 0; j < this.shockwaves.length; j++) {
-        const wave = this.shockwaves[j];
-        const dx = boid.x - wave.x;
-        const dy = boid.y - wave.y;
-        const d = Math.sqrt(dx * dx + dy * dy);
-        
-        if (Math.abs(d - wave.radius) < 30 && d > 0) {
-          const force = wave.power * (1 - wave.radius / wave.maxRadius);
-          shockwaveFx += (dx / d) * force;
-          shockwaveFy += (dy / d) * force;
-        }
+      // C) Physarum chemotaxis sensing (steers heading towards trail concentrations)
+      if (this.params.showTrails && physarumWeight > 0.05 && trailData) {
+        boid.physarumSense(trailData, this.width, this.height, physarumWeight,
+          this.trailBuffer.width, this.trailBuffer.height);
       }
 
       // Apply combined forces: F_total = sum(w_i * F_i)
@@ -238,15 +260,14 @@ export class AgentSystem {
         sep.fx * separationWeight +
         ali.fx * alignmentWeight +
         coh.fx * cohesionWeight +
-        flow.fx * flowFieldWeight +
-        shockwaveFx;
+        flow.fx * flowFieldWeight;
 
       const totalFy =
         sep.fy * separationWeight +
         ali.fy * alignmentWeight +
         coh.fy * cohesionWeight +
-        flow.fy * flowFieldWeight +
-        shockwaveFy;
+        flow.fy * flowFieldWeight;
+      boid.applyForce(gestureFx, gestureFy);
 
       boid.applyForce(totalFx, totalFy);
 
@@ -270,7 +291,7 @@ export class AgentSystem {
   render(ctx) {
     // A) Render Physarum trail buffer
     if (this.params.showTrails) {
-      this.trailBuffer.renderTo(ctx, 0.88);
+      this.trailBuffer.renderTo(ctx, 0.52);
     }
 
     // B) Optional Flow Field vector overlay
@@ -283,23 +304,7 @@ export class AgentSystem {
       this.agents[i].draw(ctx);
     }
 
-    // D) Render shockwaves
-    ctx.save();
-    ctx.globalCompositeOperation = 'screen';
-    for (let i = 0; i < this.shockwaves.length; i++) {
-      const wave = this.shockwaves[i];
-      const alpha = 1.0 - (wave.radius / wave.maxRadius);
-      ctx.beginPath();
-      ctx.arc(wave.x, wave.y, wave.radius, 0, Math.PI * 2);
-      
-      // Convert color to have alpha if needed, simpler is using globalAlpha
-      ctx.globalAlpha = Math.max(0, alpha);
-      ctx.strokeStyle = wave.color;
-      ctx.lineWidth = 4 + (alpha * 6);
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = wave.color;
-      ctx.stroke();
-    }
-    ctx.restore();
+    // Beat feedback is rendered as paper snaps by the background collage;
+    // avoid drawing a literal circular shockwave over the composition.
   }
 }

@@ -1,7 +1,7 @@
 # PinkPantheress — "Girl Like Me"
 ### Instrumento Visual de Agentes Autónomos (The Nature of Code, Cap. 5)
 
-Instrumento interactivo para la Web diseñado para interpretar en vivo la canción **"Girl Like Me"** de **PinkPantheress** (UK Garage / 2-step breakbeat, 138 BPM), basado en la estética visual Y2K cyber-dreamcore y la edición sincopada de su video musical oficial.
+Instrumento interactivo para interpretar en vivo **"Girl Like Me"** de **PinkPantheress** (UK Garage / 2-step breakbeat, 138 BPM). Su lenguaje visual combina tartán británico impreso, fotos recortadas, skyline londinense en capas y agentes como fragmentos de papel.
 
 Construido utilizando exclusivamente la paleta algorítmica de **Steering Behaviors (Craig Reynolds)**, **Flocking**, **Flow Fields (Campos de Flujo por Ruido Simplex)** e **Interactive Physarum (Simulación de Moho del Fango)**.
 
@@ -13,13 +13,14 @@ Construido utilizando exclusivamente la paleta algorítmica de **Steering Behavi
 - **Escalado Rítmico Cuantizado (*Stepped Scaling*)**: Emula la edición del video musical de PinkPantheress mediante saltos discretos de escala y ráfagas de impulsos sincopados que reaccionan a tus toques de ritmo.
 - **Interpretación Humana Activa**: Sin análisis de audio ni avance automático de secciones. El reloj puede seguir la canción; quien interpreta escucha, decide y conduce los cambios del score en tiempo real.
 - **Partitura Visual (Visual Score)**: Guía de interpretación en 6 secciones (Intro, Verso 1, Coro 1, Puente, Coro 2 y Outro) con presets de parámetros y pistas de acción en tiempo real.
-- **Collage británico rítmico**: Londres ilustrado con casas, taxi, autobús, puente y una bailarina de papel original; el desplazamiento, el pulso y los tintes cambian con el reloj de la canción. Las secciones del score siguen bajo control manual.
+- **Escenario tartán**: el tejido impreso cubre el fondo; varias capas fotográficas del skyline se desplazan a la izquierda a distintas velocidades. Taxi y cabina cruzan el escenario como recortes con contorno y sombra, sin una tarjeta blanca detrás.
+- **Retratos en cortes breves**: con <kbd>I</kbd>, quien interpreta decide cuándo aparece la foto de PinkPantheress; su posición cambia aleatoriamente, se inclina en poses discretas de stop motion y desaparece. El reloj musical no dispara este recorte.
 - **Lyric video local**: La letra compartida para esta pieza viene cargada como `.LRC` local y revela líneas y palabras con marcas de tiempo durante la canción. Puedes sustituirla desde **CARGAR LETRA .LRC**. <kbd>J</kbd> muestra u oculta la proyección.
-- **Golpes de escena**: Cada acción de interpretación muestra una tarjeta de título, empuja el collage urbano hacia la izquierda y dispara un salto visual breve.
+- **Golpes de escena**: Cada acción de interpretación muestra una tarjeta tipográfica de papel, empuja el collage urbano y desplaza brevemente algunos recortes. El feedback evita ondas circulares.
 - **Modo concierto**: Haces de luz, bloom suave, una silueta de audiencia y letras como recortes independientes convierten el paisaje en una proyección escénica. El HUD puede ocultarse con <kbd>M</kbd> o <kbd>F2</kbd>.
 - **Letra para estudiar**: Un fragmento breve se divide en cuatro gestos; la tecla <kbd>H</kbd> recorre acentos y contratiempos.
-- **Partículas con roles**: Cuatro glifos representan voz, bajo, caja y hi-hat; cada agente conserva su percepción vecinal y sensores de Physarum.
-- **Estética Y2K Camcorder**: HUD estilo miniDV de los años 2000, paleta cromática Baby Pink, Fucsia Neón, Lavanda Cyber y destellos brillantes de 4 puntas.
+- **Partículas con roles**: cuatro tipos de fragmento recortado sugieren voz, bajo, caja y hi-hat. Conservan percepción vecinal, alineación, cohesión, separación, consulta del flow field y sensores de Physarum.
+- **Intención y conducción humana**: los controles alteran las reglas o el entorno durante la interpretación; las secciones y la paleta cambian manualmente, y la foto se activa con <kbd>I</kbd>. No se analiza el audio para decidir el movimiento de los agentes.
 - **Acompañamiento de Audio Opcional**: Incluye un sintetizador de base 2-step a 138 BPM incorporado y un cargador de archivos MP3 para ensayar la canción localmente.
 
 ---
@@ -34,6 +35,7 @@ Construido utilizando exclusivamente la paleta algorítmica de **Steering Behavi
 | <kbd>D</kbd> | **Spin** | Cambia el campo entre corriente, vórtice y ondas. |
 | <kbd>F</kbd> / <kbd>T</kbd> | **Estelas Physarum** | Enciende o apaga las estelas químicas. |
 | <kbd>H</kbd> | **Estudiar el fraseo** | Avanza palabra por palabra por el fragmento breve y muestra su conteo silábico. |
+| <kbd>I</kbd> | **Recorte fotográfico** | Hace aparecer la foto en un lugar aleatorio por un instante; quien interpreta decide cuándo. |
 | <kbd>L</kbd> / Botón | **Reproducir "Girl Like Me"** | Reproduce/Pausa la canción oficial cargada desde `src/sonido/`. |
 | <kbd>C</kbd> | **Cohesión (Vocal)** | Muestra **CLOSE IN!** e incrementa la cohesión durante la voz íntima. |
 | <kbd>V</kbd> | **Separación (Breakbeat)** | Muestra **BREAK OUT!** para una dispersión centrífuga explosiva. |
@@ -74,4 +76,9 @@ Para proyectar la letra completa, usa **CARGAR LETRA .LRC** y selecciona un arch
 
 ## Documentación y Bitácora
 
-Consulta la autoevaluación detallada y el fundamento teórico completo en [BITACORA_CAMBIOS.md](file:///c:/Users/camil/InteractivOOOOOSFUerzas/BITACORA_CAMBIOS.md).
+Consulta la bitácora, las evidencias pendientes y la autoevaluación provisional en [BITACORA_CAMBIOS.md](BITACORA_CAMBIOS.md).
+
+## Referentes consultados
+
+- [The Pink Panther — Watch the Titles](https://www.watchthetitles.com/titlesequence/the-pink-panther/): referencia de timing musical, acting gráfico y títulos animados; no es una guía para reproducir personajes o diseños.
+- [Interactive Physarum — Bleuje](https://bleuje.com/physarum-explanation/): sensores frontales, giro hacia la concentración de estela, difusión y evaporación.
