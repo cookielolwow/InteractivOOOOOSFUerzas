@@ -1,6 +1,3 @@
-// Camcorder / Y2K Cyber-Dreamcore UI for PinkPantheress "Girl Like Me"
-// Displays Visual Score, Expressive Controls, and Perception Inspection Panel
-
 import { SECTIONS } from '../visualScore.js';
 
 export class CamcorderUI {
@@ -15,6 +12,7 @@ export class CamcorderUI {
 
     this.isLabOpen = false;
     this.isUiVisible = true;
+    this.prevPulse = 0;
 
     this.buildDOM();
     this.bindEvents();
@@ -27,9 +25,9 @@ export class CamcorderUI {
         <!-- Top Bar -->
         <header class="hud-top-bar">
           <div class="hud-left">
-            <span class="rec-badge"><span class="rec-dot"></span>REC</span>
-            <span class="hud-track-title">PINKPANTHERESS // "GIRL LIKE ME"</span>
-            <span class="hud-meta">138 BPM • UK GARAGE / 2-STEP</span>
+            <span class="rec-badge"><span class="rec-dot"></span>♥ REC</span>
+            <span class="hud-track-title">PiNkPaNtHeReSs ♥ gIrL LiKe mE</span>
+            <span class="hud-meta">♛ 138 BPM • UK GARAGE ♛ fAnCy tHaT!</span>
           </div>
 
           <div class="hud-right">
@@ -43,7 +41,7 @@ export class CamcorderUI {
         <!-- Visual Score Timeline Navigator -->
         <div class="hud-score-navigator">
           <div class="score-meta">
-            <span class="score-label">PARTITURA VISUAL (SCORE)</span>
+            <span class="score-label">★ VISUAL SCORE ★</span>
             <div class="score-current-info" id="scoreCurrentInfo">
               <strong id="scoreSectionName">INTRO: INTIMIDAD VOCAL</strong>
               <span id="scoreHint">Presiona [C] para Cohesión alta. Partículas unidas.</span>
@@ -64,7 +62,7 @@ export class CamcorderUI {
         <!-- Center Beat Stutter Indicator (The Video Edit Escalado Effect) -->
         <div class="hud-center-stutter">
           <div class="stutter-gauge">
-            <span class="stutter-label">ESCALADO RÍTMICO</span>
+            <span class="stutter-label">♫ RHYTHM HEAVEN ♫</span>
             <div class="stutter-steps" id="stutterSteps">
               <span class="step-bar" data-step="1"></span>
               <span class="step-bar" data-step="2"></span>
@@ -72,6 +70,7 @@ export class CamcorderUI {
               <span class="step-bar" data-step="4"></span>
             </div>
           </div>
+          <div class="rhythm-feedback" id="rhythmFeedback"></div>
         </div>
 
         <!-- Bottom Expressive Performance Dock -->
@@ -80,44 +79,45 @@ export class CamcorderUI {
           <div class="dock-triggers">
             <button class="trigger-btn beat-trigger" id="btnBeatTrigger">
               <span class="key-badge">ESPACIO / CLICK</span>
-              <span class="trigger-name">⚡ ESCALADO RÍTMICO (BEAT STEP)</span>
+              <span class="trigger-name">♥ BEAT DROP</span>
             </button>
 
             <button class="trigger-btn" id="btnCohesion" data-key="C">
               <span class="key-badge">[C]</span>
-              <span class="trigger-name">COHESIÓN (VOCAL)</span>
+              <span class="trigger-name">♫ GATHER (VOCAL)</span>
             </button>
 
             <button class="trigger-btn" id="btnSeparation" data-key="V">
               <span class="key-badge">[V]</span>
-              <span class="trigger-name">SEPARACIÓN (BREAKBEAT)</span>
+              <span class="trigger-name">★ SCATTER (BREAK)</span>
             </button>
 
             <button class="trigger-btn" id="btnFlow" data-key="F">
               <span class="key-badge">[F]</span>
-              <span class="trigger-name">FLOW FIELD (TORBELLINO)</span>
+              <span class="trigger-name">♛ SWIRL (FLOW)</span>
             </button>
 
             <button class="trigger-btn" id="btnTrails" data-key="T">
               <span class="key-badge">[T]</span>
-              <span class="trigger-name">ESTELAS PHYSARUM</span>
+              <span class="trigger-name">🍒 TRAILS (PHYSARUM)</span>
             </button>
           </div>
 
+          <div class="dock-audio-controls">
             <!-- Primary Song Playback -->
             <button class="audio-btn song-play-btn" id="btnPlayCustomAudio">
               <span class="audio-icon">▶</span>
-              <span id="txtSongState">PLAY "GIRL LIKE ME"</span>
+              <span id="txtSongState">▶ gIrL LiKe mE</span>
             </button>
 
             <!-- Metronome 2-step generator fallback -->
             <button class="audio-btn" id="btnToggleDrum" title="Base rítmica sintética a 138 BPM para práctica">
               <span class="audio-icon">🥁</span>
-              <span id="txtDrumState">BASE 2-STEP (138 BPM)</span>
+              <span id="txtDrumState">♫ 2-STEP BEAT (138)</span>
             </button>
 
             <label class="audio-upload-btn" title="Cargar archivo de audio alternativo">
-              <span>📂 CAMBIAR AUDIO</span>
+              <span>♛ LOAD AUDIO</span>
               <input type="file" id="fileAudioInput" accept="audio/*" style="display:none">
             </label>
           </div>
@@ -186,6 +186,8 @@ export class CamcorderUI {
     this.txtDrumState = this.container.querySelector('#txtDrumState');
     this.fileAudioInput = this.container.querySelector('#fileAudioInput');
     this.btnPlayCustomAudio = this.container.querySelector('#btnPlayCustomAudio');
+    this.txtSongState = this.container.querySelector('#txtSongState');
+    this.rhythmFeedback = this.container.querySelector('#rhythmFeedback');
   }
 
   bindEvents() {
@@ -252,7 +254,7 @@ export class CamcorderUI {
     // 5. Audio Companion
     this.btnToggleDrum.addEventListener('click', () => {
       const playing = this.audioCompanion.toggleDrumTrack();
-      this.txtDrumState.textContent = playing ? '⏹ DETENER BASE 2-STEP' : '🥁 BASE 2-STEP (138 BPM)';
+      this.txtDrumState.textContent = playing ? '⏹ DETENER BASE 2-STEP' : '♫ 2-STEP BEAT (138)';
       this.btnToggleDrum.classList.toggle('is-active', playing);
       this.visualScore.isPlaying = playing;
     });
@@ -261,13 +263,13 @@ export class CamcorderUI {
       const file = e.target.files[0];
       if (file) {
         this.audioCompanion.loadAudioFile(file);
-        this.btnPlayCustomAudio.textContent = '▶ PLAY AUDIO CARGADO';
+        this.txtSongState.textContent = '▶ PLAY AUDIO CARGADO';
       }
     });
 
     this.btnPlayCustomAudio.addEventListener('click', () => {
       const playing = this.audioCompanion.toggleSongAudio();
-      this.btnPlayCustomAudio.textContent = playing ? '⏸ PAUSAR "GIRL LIKE ME"' : '▶ PLAY "GIRL LIKE ME"';
+      this.txtSongState.textContent = playing ? '⏸ PAUSAR gIrL LiKe mE' : '▶ gIrL LiKe mE';
       this.btnPlayCustomAudio.classList.toggle('is-active', playing);
       this.visualScore.isPlaying = playing;
     });
@@ -320,8 +322,8 @@ export class CamcorderUI {
   }
 
   bindSlider(sliderId, valId, callback) {
-    const slider = this.container.querySelector(`#${sliderId}`);
-    const valSpan = this.container.querySelector(`#${valId}`);
+    const slider = this.container.querySelector('#' + sliderId);
+    const valSpan = this.container.querySelector('#' + valId);
     if (slider && valSpan) {
       slider.addEventListener('input', (e) => {
         valSpan.textContent = e.target.value;
@@ -344,5 +346,16 @@ export class CamcorderUI {
     this.elStutterSteps.forEach((step, idx) => {
       step.classList.toggle('is-lit', idx < activeLevel);
     });
+
+    // Rhythm Feedback
+    if (this.prevPulse <= 0.1 && pulse > 0.5) {
+      const words = ['PERFECT!', 'GREAT!', 'fAnCy!', '♥♥♥', 'SLAY!', 'gIrL!'];
+      const word = words[Math.floor(Math.random() * words.length)];
+      this.rhythmFeedback.textContent = word;
+      this.rhythmFeedback.style.animation = 'none';
+      void this.rhythmFeedback.offsetWidth; // trigger reflow
+      this.rhythmFeedback.style.animation = 'popIn 0.8s ease-out forwards';
+    }
+    this.prevPulse = pulse;
   }
 }

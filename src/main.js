@@ -7,6 +7,7 @@ import { AgentSystem } from './agents/AgentSystem.js';
 import { VisualScore } from './visualScore.js';
 import { AudioCompanion } from './audio/drumTrack.js';
 import { CamcorderUI } from './ui/camcorderUI.js';
+import { FancyBackground } from './background.js';
 
 class VisualInstrumentApp {
   constructor() {
@@ -32,6 +33,9 @@ class VisualInstrumentApp {
 
     // Initialize Camcorder HUD UI
     this.ui = new CamcorderUI(this.agentSystem, this.visualScore, this.audioCompanion);
+    
+    // Initialize Fancy Background
+    this.background = new FancyBackground(this.width, this.height);
 
     this.lastTime = performance.now();
 
@@ -52,6 +56,7 @@ class VisualInstrumentApp {
 
     this.ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     this.agentSystem.resize(this.width, this.height);
+    if (this.background) this.background.resize(this.width, this.height);
   }
 
   bindEvents() {
@@ -153,6 +158,7 @@ class VisualInstrumentApp {
 
       // Tap on canvas triggers beat step
       this.agentSystem.triggerBeat(1.0);
+      if (this.background) this.background.triggerBeatRing(e.clientX, e.clientY, '#CC0033');
     });
 
     window.addEventListener('pointerup', () => {
@@ -189,9 +195,15 @@ class VisualInstrumentApp {
       // 2. Update Autonomous Agent Swarm
       this.agentSystem.update(currentTime, deltaMs / 16.666);
 
-      // 3. Clear Screen with Y2K Night Atmosphere
-      this.ctx.fillStyle = '#0A0310';
-      this.ctx.fillRect(0, 0, this.width, this.height);
+      // 3. Clear Screen & Render Background
+      this.ctx.clearRect(0, 0, this.width, this.height);
+      if (this.background) {
+        this.background.update(currentTime, this.agentSystem.globalBeatPulse);
+        this.background.render(this.ctx);
+      } else {
+        this.ctx.fillStyle = '#0A0310';
+        this.ctx.fillRect(0, 0, this.width, this.height);
+      }
 
       // 4. Render Swarm, Trails & Field
       this.agentSystem.render(this.ctx);
