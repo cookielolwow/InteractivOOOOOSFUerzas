@@ -5,8 +5,9 @@
 - **Instrumento:** visual interactivo para interpretar *Girl Like Me*, de PinkPantheress.
 - **Contexto musical:** UK garage / 2-step; el proyecto usa una referencia de 138 BPM.
 - **Tecnología:** JavaScript, Vite, HTML Canvas 2D y CSS.
+- **Demo pública:** [Instrumento visual](https://cookielolwow.github.io/InteractivOOOOOSFUerzas/).
 - **Eje de la unidad:** agentes con percepción limitada, steering behaviors, flocking, flow fields e Interactive Physarum.
-- **Estado de esta bitácora:** borrador escrito desde mi proceso y contrastado con el código. Dejé como pendientes los ensayos que todavía tengo que realizar y documentar.
+- **Estado de esta bitácora:** documenté el funcionamiento actual, probé controles en el navegador local y añadí observaciones verificables. La interpretación musical completa y la medición de fluidez en el equipo final todavía requieren un ensayo presencial.
 
 ## Intención y metáfora
 
@@ -126,23 +127,17 @@ También puedo usar los botones del dock para golpear, cambiar cohesión o separ
 
 **Evidencia de verificación disponible:** `npm run build` terminó correctamente en la iteración del 29 de septiembre de 2026. Esto confirma la compilación, pero no demuestra por sí mismo una tasa concreta de FPS ni fluidez en el equipo de presentación.
 
-### 6. Corrección del cambio entre letra automática y manual
+### 6. Prueba y retiro de la capa de letra
 
-Al usar la letra encontré un salto de estado: al pasar del modo sincronizado al manual podía continuar con un índice antiguo, en vez de partir de la palabra que estaba viendo. Corregí el cambio para que B o el clic continúen desde la línea y palabra actuales. También hice que el modo sincronizado espere la primera marca de tiempo del `.LRC`, y que un archivo vacío o inválido limpie el estado anterior.
+Probé una proyección de letra, pero no conseguí que el seguimiento quedara confiable durante la interpretación. Decidí quitarla de la interfaz en vez de dejar controles que pudieran confundirme. En la versión actual no hay botones, panel ni atajos de letra: B activa el salto de papel e I dispara la aparición manual de la foto. Esta decisión mantiene el foco en escuchar y conducir el sistema.
 
-**Evidencia:** `src/ui/lyricsOverlay.js`, `findCueIndex()`, `advanceManualCue()`, `setAutomaticMode()` y `showMessage()`. La compilación de producción pasó después de esta corrección; me falta comprobar ambos modos durante un ensayo real.
+**Evidencia actual:** `src/main.js` (controles vigentes) y `src/ui/camcorderUI.js` (interfaz actual). Las referencias a sincronización automática que quedaron en borradores anteriores ya no describen este prototipo.
 
-### 7. Seguimiento automático del audio
+### 7. Collage, respuesta rítmica y cambio de paleta
 
-Encontré que el proyecto ya incluía las marcas de tiempo de la letra, pero al cargarla empezaba en modo manual. Cambié el inicio para que la proyección consulte el tiempo actual del reproductor y siga las marcas del archivo `.LRC`; si quiero intervenir, B pasa al avance manual y N vuelve al seguimiento automático. Así no dependo de estimar el tiempo de la canción con el pulso de 138 BPM.
+Después de quitar la letra, reforcé el tartán, las capas de ciudad, el movimiento por golpes y los recortes fotográficos. El fondo acompaña el tiempo del audio con cambios de paleta y el control B produce un acento de papel. En las pruebas de navegador, A, S, D, C, V, B e I mostraron sus mensajes de respuesta; 3 y 6 cambiaron la sección visible del score a Coro 1 y Outro.
 
-**Evidencia:** `src/lyrics/girl-like-me.lrc`, `src/ui/lyricsOverlay.js` (`load()`, `update()` y `setAutomaticMode()`) y `src/main.js` (`getSongTime()`). La compilación pasó; debo escuchar la canción completa en el navegador para detectar cualquier desfase específico de la versión de audio.
-
-### 8. Retiro de la capa de letra y respuesta del collage
-
-Después de probarla, la proyección de letra no funcionó de forma confiable y decidí quitarla de la interfaz. También retiré sus teclas y el panel para estudiar el fraseo; B ahora activa un salto más amplio de los recortes. Hice que los golpes impulsen las capas fotográficas y que los colores y el tartán transicionen con el reloj de la canción. Quité además el rótulo “LONDON / 2-STEP” del fondo.
-
-**Evidencia:** `src/main.js` (teclas y reloj de audio), `src/ui/camcorderUI.js` (controles visibles), `src/background.js` (paleta, tartán y movimiento por golpes) y `src/styles.css` (estilos de proyección retirados). La compilación de producción pasó; comprobé que la interfaz ya no ofrece controles de letra.
+**Evidencia:** `src/background.js`, `src/main.js`, `src/ui/camcorderUI.js` y la matriz de pruebas de esta bitácora. No afirmo una sincronización musical completa porque no reproduje la canción durante toda la prueba.
 
 ## Partitura de interpretación
 
@@ -157,60 +152,53 @@ La tabla es una guía de escucha, no una secuencia ejecutada automáticamente. S
 | Coro 2, 1:40–2:05 | Reaparece el clímax; alternar expansión y reunión. | Alternar A y S según lo que escuche; Q para acentuar. |
 | Outro, 2:05–2:25 | Dejar espacio al final de la canción y observar la evaporación. | Reducir intervenciones y dejar que las estelas decaigan. |
 
-## Registro de pruebas y ensayos
+## Registro de pruebas y evidencias
 
-No registro como observación algo que todavía no he comprobado. Completaré las celdas vacías con fecha, condiciones y una captura o video corto del prototipo.
+Realicé estas comprobaciones el **29/09/2026** en la versión local `http://127.0.0.1:5175/`, en el navegador integrado y con el HUD visible. Tomé capturas del estado general y del panel de parámetros durante esta revisión y las comparto en esta conversación; muestran el prototipo en ejecución, no una grabación de la interpretación completa.
 
-| Prueba | Predicción antes de probar | Observación real / evidencia |
-|---|---|---|
-| Bajar radio de percepción y subirlo después (control Parámetros). | Con menor radio, cada agente consulta menos vecinos; el grupo debería perder coordinación local. Al aumentarlo, separación, alineación y cohesión deberían considerar más agentes. | **Pendiente:** anotar valores, cambio visible y captura. |
-| Cambiar fuerza de cohesión con S / control del panel. | Una cohesión mayor debería aumentar la tendencia de los agentes a dirigirse al promedio de posiciones de sus vecinos; no debería fijar un centro absoluto. | **Pendiente:** anotar antes/después y si la predicción se cumplió. |
-| Cambiar modo del flow field con D. | Aunque el campo cambie, cada agente debería seguir una dirección local distinta según su posición. Las trayectorias deberían variar sin volverse idénticas. | **Pendiente:** comparar modos y guardar captura del overlay si se activa. |
-| Desactivar y reactivar estelas con F/T. | Al apagarlas, los agentes dejan de depositar y consultar el campo químico; al encenderlas, el depósito, la difusión, la evaporación y los sensores vuelven a influir en el rumbo. | **Pendiente:** anotar diferencia en trayectoria y visibilidad. |
-| Usar clic y observar el retorno. | El gesto afectará agentes próximos al punto; al decaer la fuerza temporal, el flocking y el campo volverán a dominar. | **Pendiente:** describir el efecto y cuánto tarda en volver al comportamiento base. |
-| Probar el modo de pantalla completa durante la canción. | El HUD se debería poder ocultar y el canvas continuar ocupando la pantalla. | **Pendiente:** registrar navegador, resolución y cualquier caída de fluidez. |
+| Prueba | Predicción | Observación comprobada | Evidencia |
+|---|---|---|---|
+| Compilar la versión de producción. | Vite debería resolver los módulos y generar `dist/` sin errores. | `npm run build` finalizó correctamente. Esto verifica compilación, no FPS ni compatibilidad en todos los equipos. | Salida de compilación revisada el 29/09/2026. |
+| Cambiar el radio de percepción. | El valor debería actualizarse en el control y en el texto visible; los agentes deberían consultar vecinos dentro de ese radio. | El control partió de 75 px. Al llevarlo al máximo, el deslizador y el texto cambiaron a 180 px. Al recargar se restauraron los valores iniciales. El cambio de cohesión no se midió numéricamente. | Captura del panel durante la prueba; `camcorderUI.js` enlaza el control con cada agente. |
+| Activar cohesión, dispersión y giro. | Cada tecla debería mostrar un acento y cambiar temporalmente la regla o el modo de flujo. | A mostró `SCATTER!`, S `GATHER!`, D `SPIN!`, C `CLOSE IN!` y V `BREAK OUT!`. B mostró `PAPER SNAP!`; I mostró `PHOTO CUT!`. El score respondió a 3 (`CORO 1`) y 6 (`OUTRO`). | Textos de respuesta visibles en la interfaz; `main.js` contiene las acciones asociadas. |
+| Alternar Physarum con F. | El mensaje debería confirmar los dos estados; el sistema solo debería depositar y consultar estelas cuando están activas. | F mostró `TRAIL OFF` y, al repetirla, `TRAIL ON`. El código activa o suspende el búfer y la consulta sensorial según ese estado. No medí densidad ni evaporación con una captura comparativa. | Mensajes del HUD y condiciones de `AgentSystem.update()` / `render()`. |
+| Interactuar con clic sobre el lienzo. | Cada clic debería iniciar un gesto local temporal y dejar que el movimiento autónomo retome el control. | Hice dos clics sobre el lienzo; la animación siguió ejecutándose y no aparecieron errores de consola. El código alterna dispersión, agrupación, órbita y deriva. No medí en segundos el retorno al estado base. | `AgentSystem.interactAt()` y `setInteractionMode()`; consola sin errores durante la sesión. |
+| Ocultar y restaurar el HUD. | M debería alternar la capa de interfaz sin detener el lienzo. | M ocultó los controles y otra pulsación los restauró; el canvas continuó animándose. | Estado visual en el navegador y manejador de M en `main.js`. |
+| Pantalla completa y fluidez. | El botón debería ampliar la proyección y el movimiento mantenerse fluido. | La solicitud de pantalla completa no se activó en el navegador integrado. No medí FPS ni ejecuté la canción completa; esos puntos quedan por probar en el equipo de presentación. | Prueba local: `document.fullscreenElement` siguió vacío; el manejador descarta silenciosamente el rechazo. |
+
+La interfaz actual no ofrece controles de letra y no muestra el rótulo “LONDON / 2-STEP”. Revisé la consola de la pestaña al terminar las interacciones: no registró errores. La captura del panel sirve como evidencia del control de percepción; la captura general muestra las seis secciones y los controles de performance.
 
 ## Autoevaluación provisional
 
-Esta calificación es un **borrador para revisar después del ensayo**. No asigno puntaje completo a la comprensión o a la interpretación hasta registrar las pruebas anteriores y poder defenderlas oralmente.
+Esta es mi valoración razonada del estado actual, no una nota asignada por el curso.
 
-### 1. Cumplimiento del encargo — 22 / 25 (provisional)
+### 1. Cumplimiento del encargo — 23 / 25
 
-Construí el instrumento con tecnologías web para acompañar en tiempo real una canción que elegí. Tiene controles de interpretación y opción de pantalla completa. La compilación de producción pasó. Me faltan evidencias de una ejecución completa en la resolución y el equipo del performance, incluida una comprobación de fluidez.
+Construí el instrumento web y comprobé que compila, que aparecen las seis secciones y que los controles principales responden. No me asigno el puntaje completo porque todavía no he presentado la ejecución en el equipo final ni he comprobado allí la pantalla completa.
 
-**Evidencias:** `src/main.js` (canvas, bucle de animación y controles); `src/ui/camcorderUI.js` (botón de pantalla completa y controles); compilación de Vite (`npm run build`, 29/09/2026).
+### 2. Comprensión y verificación — 23 / 25
 
-### 2. Comprensión y verificación — 18 / 25 (provisional)
+Puedo explicar cómo se combinan separación, alineación, cohesión y flujo, y dónde actúan los sensores Physarum. Comprobé los cambios de controles y el radio de percepción en el navegador. Todavía me falta comparar trayectorias con mediciones repetibles, no solo con lo que veo en una captura.
 
-Puedo ubicar el estado, las reglas de flocking, el campo de direcciones y los sensores de Physarum en módulos separados. La interfaz permite cambiar parámetros comunes. Sin embargo, aún debo completar la tabla de pruebas con predicción, observación y evidencia para demostrar que puedo anticipar y verificar los cambios.
+### 3. Diseño e intención — 22 / 25
 
-**Evidencias:** `Boid.js`, `AgentSystem.js`, `FlowField.js`, `PhysarumTrailBuffer.js` y controles del panel en `camcorderUI.js`.
+Relacioné el movimiento autónomo con corrientes, agrupaciones y rupturas de la música. El tartán, la ciudad en capas y los recortes apoyan la intención británica de la pieza. Quiero revisar la legibilidad en una proyección grande y ajustar el contraste si el espacio de presentación lo requiere.
 
-### 3. Diseño e intención — 21 / 25 (provisional)
+### 4. Interpretación humana — 21 / 25
 
-La combinación entre cohesión, dispersión, flow fields y estelas ofrece una metáfora que puedo relacionar con voz, breakbeat, corrientes y memoria química. El tartán, las fotografías y los recortes hacen reconocible el contexto visual. Me falta documentar, con una grabación o notas de ensayo, qué combinación funciona mejor para cada pasaje y qué ajustes hice a partir de lo observado.
+Comprobé que puedo elegir secciones y activar gestos con el teclado, y que el score no cambia de sección por sí solo. Aún me falta ensayar la canción completa y registrar por qué elegí cada intervención; por eso no presento esta prueba de controles como evidencia de un performance ya realizado.
 
-**Evidencias:** score de seis secciones en `src/visualScore.js`; dirección de arte en `src/background.js`; formas y reglas en `src/agents/Boid.js`.
+### Puntaje de autoevaluación: 89 / 100
 
-### 4. Interpretación humana — 21 / 25 (provisional)
+No marco 100/100 porque quedan por realizar el ensayo completo, la verificación de fluidez en el equipo de proyección y la comprobación de pantalla completa fuera del navegador integrado.
 
-Las secciones se seleccionan manualmente con 1–6 y hay controles de gesto, golpe y estelas. Los clics cambian temporalmente el comportamiento alrededor del punto elegido. La tecla I deja en mis manos el momento del recorte fotográfico; al avanzar la canción, el fondo cambia sus colores. Debo mostrar en el ensayo que escucho y decido cuándo intervenir, sin seguir el score de forma automática.
+## Antes de la presentación
 
-**Evidencias:** `src/main.js` (teclas, puntero y selección de sección) y `src/visualScore.js` (el score no avanza de sección por sí solo).
-
-### Puntaje de trabajo: 82 / 100 — revisar tras el ensayo
-
-Este total no es una nota certificada. Debo ajustar cada criterio según las pruebas que realice y las evidencias que pueda mostrar en la presentación.
-
-## Pendientes antes de entregar
-
-- [ ] Ejecutar y registrar las pruebas de percepción, cohesión, flow field y Physarum.
-- [ ] Ensayar la pieza completa con las secciones elegidas en vivo; registrar qué decidí y por qué.
-- [ ] Capturar evidencia del modo de pantalla completa y de dos cambios perceptibles de parámetros.
-- [ ] Comprobar fluidez en el equipo y navegador de presentación; no afirmar “60 FPS estables” sin medirlo.
-- [ ] Ensayar cuándo usar I, A/S/D y Q para que los recortes y cambios del enjambre respondan a decisiones que tomo al escuchar.
-- [ ] Probar las transiciones de color y los saltos de papel mientras avanza la canción.
-- [ ] Añadir a esta bitácora la fecha y una reflexión personal después del ensayo.
+- [ ] Reproducir la canción completa y anotar mis decisiones por sección.
+- [ ] Probar pantalla completa en el equipo de proyección; el navegador integrado no activó esa solicitud durante la revisión local.
+- [ ] Medir la fluidez en el equipo final y registrar navegador, resolución y resultado.
+- [ ] Probar en contexto musical las transiciones de color, las estelas y los saltos de papel; la prueba local de controles no sustituye ese ensayo.
+- [ ] Añadir una reflexión personal después de presentar la pieza.
 
 ## Referencias de consulta
 
