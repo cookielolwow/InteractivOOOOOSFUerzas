@@ -31,4 +31,33 @@ describe('ABD goal logic', () => {
     const palette = ['#ff5da2', '#6ef3ff', '#ffd166', '#7af76a', '#8ea7ff'];
     expect(palette.includes(resolveNextGoalColor(palette))).toBe(true);
   });
+
+  it('rejects rotation when individual axis errors combine beyond the orientation tolerance', () => {
+    const letters = ['A', 'B', 'D'].map((id) => ({
+      id,
+      x: 0,
+      y: 0,
+      scale: 1,
+      color: '#ff5da2',
+      rotation: { x: 0.16, y: 0.16, z: 0.16 },
+    }));
+    const positions = Object.fromEntries(letters.map(({ id }) => [id, { x: 0, y: 0 }]));
+
+    expect(evaluateGoalState({
+      letters,
+      objective: { color: '#ff5da2' },
+      positions,
+      rotations: Object.fromEntries(letters.map(({ id }) => [id, { x: 0, y: 0, z: 0 }])),
+    })).toBe(false);
+
+    letters.forEach((letter) => {
+      letter.rotation = { x: 0, y: -Math.PI * 0.15 + 2 * Math.PI, z: 0 };
+    });
+    expect(evaluateGoalState({
+      letters,
+      objective: { color: '#ff5da2' },
+      positions,
+      rotations: Object.fromEntries(letters.map(({ id }) => [id, { x: 0, y: -Math.PI * 0.15, z: 0 }])),
+    })).toBe(true);
+  });
 });

@@ -30,6 +30,30 @@ export function colorDistance(hexA, hexB) {
   );
 }
 
+export function rotationDistance(actual, expected) {
+  const toQuaternion = ({ x, y, z }) => {
+    const c1 = Math.cos(x * 0.5);
+    const c2 = Math.cos(y * 0.5);
+    const c3 = Math.cos(z * 0.5);
+    const s1 = Math.sin(x * 0.5);
+    const s2 = Math.sin(y * 0.5);
+    const s3 = Math.sin(z * 0.5);
+    return [
+      s1 * c2 * c3 + c1 * s2 * s3,
+      c1 * s2 * c3 - s1 * c2 * s3,
+      c1 * c2 * s3 + s1 * s2 * c3,
+      c1 * c2 * c3 - s1 * s2 * s3,
+    ];
+  };
+  const actualQuaternion = toQuaternion(actual);
+  const expectedQuaternion = toQuaternion(expected);
+  const dot = Math.abs(actualQuaternion.reduce(
+    (sum, component, index) => sum + component * expectedQuaternion[index],
+    0,
+  ));
+  return 2 * Math.acos(Math.min(1, dot));
+}
+
 export function resolveNextGoalColor(palette = PALETTE) {
   const index = Math.floor(Math.random() * palette.length);
   return normalizeHex(palette[index]);
@@ -62,13 +86,7 @@ export function evaluateGoalState({
     const expectedScale = targetScales?.[letterId] ?? targetScale;
     const scaleOkay = Math.abs(match.scale - expectedScale) <= 0.18;
     const colorOkay = colorDistance(match.color, objective.color) <= 60;
-    const rotationOkay = ['x', 'y', 'z'].every((axis) => {
-      const difference = Math.atan2(
-        Math.sin(actualRotation[axis] - rotation[axis]),
-        Math.cos(actualRotation[axis] - rotation[axis]),
-      );
-      return Math.abs(difference) <= rotationTolerance;
-    });
+    const rotationOkay = rotationDistance(actualRotation, rotation) <= rotationTolerance;
 
     return positionOkay && scaleOkay && colorOkay && rotationOkay;
   });

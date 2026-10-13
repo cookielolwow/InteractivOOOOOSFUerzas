@@ -5,7 +5,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import { gsap } from 'gsap';
 import { HolographicStickerDOMManager } from './HolographicStickerDOMManager.js';
-import { PALETTE, colorDistance, evaluateGoalState, resolveNextGoalColor } from './abdGameLogic.js';
+import { PALETTE, colorDistance, rotationDistance } from './abdGameLogic.js';
 
 const LETTER_SEQUENCE = ['A', 'B', 'D'];
 const publicAssetUrl = (filename) => `${import.meta.env.BASE_URL}${encodeURIComponent(filename)}`;
@@ -14,13 +14,15 @@ const PAINT_COLORS = [
   '#ffd600', '#b8ff00', '#00e676', '#00c853', '#00f5d4',
   '#00d1ff', '#00a8ff', '#0057ff', '#4833ff', '#a100ff',
 ];
+const LETTER_CONFIRMATION_COLOR = new THREE.Color('#22c55e');
 const TARGET_SCALE = 2.6;
 const LETTER_TARGET_SCALES = { A: TARGET_SCALE * 0.85, B: TARGET_SCALE, D: TARGET_SCALE * 1.15 };
+const ROTATION_TOLERANCE = 0.35;
 const VICTORY_BOUNCE_ORDER = ['A', 'B', 'D', 'A', 'B', 'D', 'A', 'B', 'D'];
 const GOAL_POSITIONS = {
   A: { x: -1.15 * TARGET_SCALE, y: -0.95 * TARGET_SCALE },
   B: { x: 0.05 * TARGET_SCALE, y: -0.95 * TARGET_SCALE },
-  D: { x: 1.28 * TARGET_SCALE, y: -0.95 * TARGET_SCALE },
+  D: { x: 1.08 * TARGET_SCALE, y: -0.95 * TARGET_SCALE },
 };
 const GOAL_ROTATION = { x: 0, y: -Math.PI * 0.15, z: 0 };
 const START_POSITIONS = {
@@ -51,8 +53,6 @@ class FrutigerAudioEngine {
     this.ducked = false;
     this.moveVoice = null;
     this.scaleVoice = null;
-    this.rotateErrors = new Map();
-    this.alignedRotations = new Set();
     this.reverb = this.ctx.createConvolver();
     this.reverb.buffer = this.createReverbImpulse(2.4, 2.1);
     this.reverbGain = this.ctx.createGain();
@@ -265,93 +265,6 @@ class FrutigerAudioEngine {
     this.scaleVoice = null;
   }
 
-  startRotateAudio(letterId) {
-    this.rotateErrors.delete(letterId);
-    this.alignedRotations.delete(letterId);
-  }
-
-  triggerRotateAudio(angleError, letterId) {
-    if (!this.ctx) return;
-    const error = Math.abs(angleError);
-    const previousError = this.rotateErrors.get(letterId);
-    const aligned = error <= 0.22;
-    if (aligned && !this.alignedRotations.has(letterId)) {
-      this.playRotationSuccessChord();
-      this.alignedRotations.add(letterId);
-    } else if (!aligned) {
-      this.alignedRotations.delete(letterId);
-      if (previousError !== undefined && Math.abs(error - previousError) >= 0.1) this.playRotateTick();
-    }
-    this.rotateErrors.set(letterId, error);
-  }
-
-  stopRotateAudio(letterId) {
-    this.rotateErrors.delete(letterId);
-    this.alignedRotations.delete(letterId);
-  }
-
-  playRotateTick() {
-    const now = this.ctx.currentTime;
-    const oscillator = this.ctx.createOscillator();
-    const filter = this.ctx.createBiquadFilter();
-    const gain = this.ctx.createGain();
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(1046.5, now);
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(3600, now);
-    oscillator.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.foleyBus);
-    this.envelope(gain, now, 0.0001, 0.025, 0.008, 0.14);
-    oscillator.start(now);
-    oscillator.stop(now + 0.16);
-    oscillator.onended = () => { oscillator.disconnect(); filter.disconnect(); gain.disconnect(); };
-  }
-
-  playRotationSuccessChord() {
-    const now = this.ctx.currentTime;
-    [261.63, 329.63, 392, 493.88].forEach((frequency, index) => {
-      const oscillator = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      const start = now + index * 0.018;
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(frequency, start);
-      oscillator.connect(gain);
-      gain.connect(this.foleyBus);
-      gain.connect(this.reverb);
-      this.envelope(gain, start, 0.0001, 0.038, 0.045, 2.25);
-      oscillator.start(start);
-      oscillator.stop(start + 2.3);
-      oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
-    });
-  }
-
-  playParameterCheck(parameter) {
-    if (!this.ctx) return;
-    const roots = { position: 659.25, scale: 783.99, color: 1046.5 };
-    const root = roots[parameter];
-    if (!root) return;
-    const now = this.ctx.currentTime;
-    [root, root * 1.5].forEach((frequency, index) => {
-      const oscillator = this.ctx.createOscillator();
-      const filter = this.ctx.createBiquadFilter();
-      const gain = this.ctx.createGain();
-      const start = now + index * 0.018;
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(frequency, start);
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(5200, start);
-      oscillator.connect(filter);
-      filter.connect(gain);
-      gain.connect(this.foleyBus);
-      gain.connect(this.reverb);
-      this.envelope(gain, start, 0.0001, index === 0 ? 0.07 : 0.035, 0.018, 0.48);
-      oscillator.start(start);
-      oscillator.stop(start + 0.5);
-      oscillator.onended = () => { oscillator.disconnect(); filter.disconnect(); gain.disconnect(); };
-    });
-  }
-
   startDrag(letter) {
     if (!this.ctx || !letter || this.activeDragVoices.has(letter.id)) return;
     const oscillator = this.ctx.createOscillator();
@@ -427,6 +340,33 @@ class FrutigerAudioEngine {
       this.envelope(gain, now, 0.0001, 0.026, 0.12, 0.28);
       oscillator.start(now);
       oscillator.stop(now + 0.3);
+    });
+  }
+
+  playParameterCheck(parameter) {
+    if (!this.ctx) return;
+    const roots = { position: 659.25, scale: 783.99, rotation: 987.77, color: 1046.5 };
+    const root = roots[parameter];
+    if (!root) return;
+    if (this.ctx.state === 'suspended') {
+      this.resume()
+        .then(() => this.playParameterCheck(parameter))
+        .catch((error) => console.warn('No se pudo reanudar el audio de confirmación.', error));
+      return;
+    }
+    const now = this.ctx.currentTime;
+    [root, root * 1.5].forEach((frequency, index) => {
+      const oscillator = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const start = now + index * 0.006;
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequency, start);
+      oscillator.connect(gain);
+      gain.connect(this.foleyBus);
+      this.envelope(gain, start, 0.0001, index === 0 ? 0.1 : 0.065, 0.004, 0.14);
+      oscillator.start(start);
+      oscillator.stop(start + 0.15);
+      oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
     });
   }
 
@@ -526,6 +466,7 @@ class ABDApp {
     this.pressCandidate = null;
     this.autoSolveTimeline = null;
     this.victoryTimeline = null;
+    this.confirmedLetters = new Set();
     this.pointer = new THREE.Vector2();
     this.particlePointer = new THREE.Vector3(100, 100, -2.8);
     this.particlePointerActive = false;
@@ -534,7 +475,7 @@ class ABDApp {
     this.dragPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
 
     this.state = 'playing';
-    this.goalColor = resolveNextGoalColor(PALETTE);
+    this.goalColors = this.createGoalColors();
     this.activeTool = 'select';
     this.letters = [];
 
@@ -567,7 +508,6 @@ class ABDApp {
           this.pressedLetter = this.selectedLetter;
           if (this.activeTool === 'move') this.audio.startMoveAudio(this.selectedLetter.id);
           if (this.activeTool === 'scale') this.audio.startScaleAudio(this.selectedLetter.id);
-          if (this.activeTool === 'rotate') this.audio.startRotateAudio(this.selectedLetter.id);
         }
         this.audio.startDrag(this.selectedLetter);
       } else if (this.selectedLetter) {
@@ -578,7 +518,6 @@ class ABDApp {
         this.audio.stopDrag(this.selectedLetter);
         this.audio.stopMoveAudio();
         this.audio.stopScaleAudio();
-        this.audio.stopRotateAudio(this.selectedLetter.id);
         this.audio.playDrop();
         this.playJellyBounce(this.selectedLetter, 0.18);
       }
@@ -611,11 +550,25 @@ class ABDApp {
       swatch.addEventListener('click', () => {
         this.selectedColor = color;
         this.currentColorEl.style.backgroundColor = color;
-        this.paletteEl.querySelectorAll('.color-swatch').forEach((button) => button.classList.toggle('is-selected', button === swatch));
-        if (this.selectedLetter) this.applyColorToLetter(this.selectedLetter, color, true);
+        if (this.activeTool === 'paint') {
+          this.statusText.textContent = `Balde · ${color} · toca una letra`;
+        } else {
+          this.statusText.textContent = `Color ${color} listo · activa el balde para pintar`;
+        }
       });
       this.paletteEl.appendChild(swatch);
     });
+  }
+
+  createGoalColors(previousColors = {}) {
+    const availableColors = [...PALETTE];
+    return Object.fromEntries(LETTER_SEQUENCE.map((id) => {
+      const choices = availableColors.filter((color) => color !== previousColors[id]);
+      const color = choices[Math.floor(Math.random() * choices.length)];
+      const colorIndex = availableColors.indexOf(color);
+      availableColors.splice(colorIndex, 1);
+      return [id, color];
+    }));
   }
 
   setupLights() {
@@ -849,13 +802,6 @@ class ABDApp {
         this.audio.updateMoveAudio(Math.hypot(letter.group.position.x - goal.x, letter.group.position.y - goal.y));
       } else if (this.activeTool === 'scale') {
         this.audio.updateScaleAudio(letter.scale - TARGET_SCALE);
-      } else if (this.activeTool === 'rotate') {
-        const rotationError = Math.hypot(
-          angleDelta(letter.mesh.rotation.x, GOAL_ROTATION.x),
-          angleDelta(letter.mesh.rotation.y, GOAL_ROTATION.y),
-          angleDelta(letter.mesh.rotation.z, GOAL_ROTATION.z),
-        );
-        this.audio.triggerRotateAudio(rotationError, letter.id);
       }
       letter.audioPose.position.copy(letter.group.position);
       letter.audioPose.rotation.set(letter.mesh.rotation.x, letter.mesh.rotation.y, letter.mesh.rotation.z);
@@ -921,11 +867,13 @@ class ABDApp {
         dragOffset: new THREE.Vector3(),
         targetScale: new THREE.Vector3(initialScale, initialScale, initialScale),
         scaleVelocity: new THREE.Vector3(),
+        locked: false,
+        confirmedPose: null,
         x: initialPosition.x,
         y: initialPosition.y,
         scale: initialScale,
         color: initialColor,
-        solved: false,
+        confirmationProgress: 0,
       };
 
       this.letters.push(letter);
@@ -959,6 +907,7 @@ class ABDApp {
 
   scrambleLetters() {
     if (!this.letters?.length) return;
+    this.confirmedLetters.clear();
     const spawnScales = [0.6, 1.7, THREE.MathUtils.randFloat(0.85, 1.25)];
     for (let index = spawnScales.length - 1; index > 0; index -= 1) {
       const swapIndex = Math.floor(Math.random() * (index + 1));
@@ -973,6 +922,7 @@ class ABDApp {
     this.letters.forEach((letter, index) => {
       gsap.killTweensOf(letter.group.position);
       gsap.killTweensOf(letter.mesh.scale);
+      gsap.killTweensOf(letter, 'confirmationProgress');
       const randomX = THREE.MathUtils.randFloat(-Math.PI, Math.PI);
       const randomY = THREE.MathUtils.randFloat(-Math.PI, Math.PI);
       const randomZ = THREE.MathUtils.randFloat(-Math.PI, Math.PI);
@@ -1016,7 +966,9 @@ class ABDApp {
       letter.isPressed = false;
       letter.isInteracting = false;
       letter.isManualTransform = false;
-      letter.solved = false;
+      letter.locked = false;
+      letter.confirmedPose = null;
+      letter.confirmationProgress = 0;
       letter.correctParameters.clear();
       letter.jellyStrength = 0;
       letter.jellyAt = -10;
@@ -1086,6 +1038,16 @@ class ABDApp {
         const tool = button.dataset.tool;
         this.activeTool = tool;
         document.querySelectorAll('.tool-button').forEach((item) => item.classList.toggle('is-active', item === button));
+        this.transformControls.showZ = tool !== 'move';
+        this.transformControls.showE = tool !== 'rotate';
+        this.transformControls.showXYZE = tool !== 'rotate';
+        if (tool === 'paint') {
+          this.transformControls.detach();
+          this.statusText.textContent = this.selectedColor
+            ? `Balde · ${this.selectedColor} · toca una letra`
+            : 'Balde · selecciona un color y toca una letra';
+          return;
+        }
         if (tool === 'select') {
           this.transformControls.detach();
           this.statusText.textContent = this.selectedLetter ? `Letra ${this.selectedLetter.id} · arrastrar` : 'Seleccionar letra';
@@ -1110,6 +1072,15 @@ class ABDApp {
       if (this.transformControls.axis !== null) return;
       const hit = this.pickLetter(event);
       if (!hit) return;
+      if (this.activeTool === 'paint') {
+        if (!this.selectedColor) {
+          this.statusText.textContent = 'Balde · selecciona un color primero';
+          return;
+        }
+        this.applyColorToLetter(hit, this.selectedColor, true);
+        this.statusText.textContent = `${hit.id} pintada de ${this.selectedColor}`;
+        return;
+      }
       this.selectedLetter = hit;
       this.pressedLetter = hit;
       hit.isPressed = true;
@@ -1117,7 +1088,6 @@ class ABDApp {
         this.audio.playLetterSound(hit.id, hit, this.getLetterProgress(hit));
         this.audio.playGrab();
       });
-      if (this.selectedColor) this.applyColorToLetter(hit, this.selectedColor);
       this.statusText.textContent = `Letra ${hit.id} seleccionada`;
       if (this.activeTool === 'select') {
         this.transformControls.detach();
@@ -1220,11 +1190,15 @@ class ABDApp {
     this.pointer.set(x, y);
     this.raycaster.setFromCamera(this.pointer, this.camera);
     const intersections = this.raycaster.intersectObjects(this.letters.map((letter) => letter.mesh), true);
-    const mesh = intersections.find((entry) => entry.object.isMesh);
-    if (!mesh) return null;
-    for (let object = mesh.object; object; object = object.parent) {
-      const letter = this.letters.find((item) => item.mesh === object);
-      if (letter) return letter;
+    for (const intersection of intersections) {
+      if (!intersection.object.isMesh) continue;
+      for (let object = intersection.object; object; object = object.parent) {
+        const letter = this.letters.find((item) => item.mesh === object);
+        if (letter) {
+          if (!letter.locked) return letter;
+          break;
+        }
+      }
     }
     return null;
   }
@@ -1334,20 +1308,19 @@ class ABDApp {
           letter.restScale = targetScale;
           letter.targetScale.setScalar(targetScale);
           letter.scaleVelocity.set(0, 0, 0);
-          letter.color = this.goalColor;
-          letter.targetColor.copy(this.getDisplayColor(this.goalColor));
+          const goalColor = this.goalColors[letter.id];
+          letter.color = goalColor;
+          letter.targetColor.copy(this.getDisplayColor(goalColor));
           letter.isPressed = false;
           letter.isDragging = false;
           letter.isInteracting = false;
           letter.scaleTweenActive = false;
-          letter.solved = true;
-          this.applyColorToLetter(letter, this.goalColor);
+          this.applyColorToLetter(letter, goalColor);
+          this.playLetterConfirmation(letter);
         }
 
         this.autoSolveTimeline = null;
         solveButton.disabled = false;
-        this.statusText.textContent = 'Composición lista';
-        this.beginVictoryCycle();
       },
     });
     this.autoSolveTimeline = timeline;
@@ -1356,7 +1329,7 @@ class ABDApp {
       const letter = this.letters.find((item) => item.id === id);
       const goal = GOAL_POSITIONS[id];
       const startAt = index * 0.28;
-      const targetColor = this.getDisplayColor(this.goalColor);
+      const targetColor = this.getDisplayColor(this.goalColors[id]);
       const colorStart = letter.targetColor.clone();
       const colorBlend = { progress: 0 };
       const baseScale = letter.baseModelScale * LETTER_TARGET_SCALES[id];
@@ -1405,7 +1378,7 @@ class ABDApp {
           letter.mesh.traverse((child) => {
             if (child.isMesh && child.material) {
               child.material.color.copy(letter.targetColor);
-              child.material.emissive = new THREE.Color(this.goalColor).multiplyScalar(0.04);
+              child.material.emissive = new THREE.Color(this.goalColors[letter.id]).multiplyScalar(0.04);
             }
           });
         },
@@ -1434,14 +1407,28 @@ class ABDApp {
       && metrics.colorFit >= 1;
   }
 
+  updateTargetFeedback(letter, metrics = this.getLetterMetrics(letter)) {
+    const checks = [
+      ['position', metrics.positionFit],
+      ['scale', metrics.scaleFit],
+      ['rotation', metrics.rotationFit],
+      ['color', metrics.colorFit],
+    ];
+
+    checks.forEach(([parameter, fit]) => {
+      if (fit >= 1 && !letter.correctParameters.has(parameter)) {
+        letter.correctParameters.add(parameter);
+        this.audio.playParameterCheck(parameter);
+      } else if (fit < 0.96) {
+        letter.correctParameters.delete(parameter);
+      }
+    });
+  }
+
   getLetterMetrics(letter) {
     const goal = GOAL_POSITIONS[letter.id];
     const positionError = Math.hypot(letter.group.position.x - goal.x, letter.group.position.y - goal.y);
-    const rotationError = Math.hypot(
-      Math.atan2(Math.sin(letter.mesh.rotation.x - GOAL_ROTATION.x), Math.cos(letter.mesh.rotation.x - GOAL_ROTATION.x)),
-      Math.atan2(Math.sin(letter.mesh.rotation.y - GOAL_ROTATION.y), Math.cos(letter.mesh.rotation.y - GOAL_ROTATION.y)),
-      Math.atan2(Math.sin(letter.mesh.rotation.z - GOAL_ROTATION.z), Math.cos(letter.mesh.rotation.z - GOAL_ROTATION.z)),
-    );
+    const rotationError = rotationDistance(letter.mesh.rotation, GOAL_ROTATION);
     const fitWithinTolerance = (error, tolerance, range) => 1 - THREE.MathUtils.clamp((error - tolerance) / (range - tolerance), 0, 1);
 
     return {
@@ -1451,25 +1438,84 @@ class ABDApp {
         0.18,
         LETTER_TARGET_SCALES[letter.id] * 0.8,
       ),
-      rotationFit: fitWithinTolerance(rotationError, 0.22, Math.PI),
-      colorFit: fitWithinTolerance(colorDistance(letter.color, this.goalColor), 60, 441.7),
+      rotationFit: fitWithinTolerance(rotationError, ROTATION_TOLERANCE, Math.PI),
+      colorFit: fitWithinTolerance(colorDistance(letter.color, this.goalColors[letter.id]), 60, 441.7),
     };
   }
 
-  updateTargetFeedback(letter) {
-    const metrics = this.getLetterMetrics(letter);
-    const checks = [
-      ['position', metrics.positionFit],
-      ['scale', metrics.scaleFit],
-      ['color', metrics.colorFit],
-    ];
-    checks.forEach(([parameter, fit]) => {
-      if (fit >= 0.999 && !letter.correctParameters.has(parameter)) {
-        letter.correctParameters.add(parameter);
-        this.audio.playParameterCheck(parameter);
-      } else if (fit < 0.96) {
-        letter.correctParameters.delete(parameter);
-      }
+  playLetterConfirmation(letter) {
+    if (letter.locked || !['playing', 'autoSolving'].includes(this.state)) return;
+    letter.locked = true;
+    letter.isInteracting = false;
+    letter.isManualTransform = false;
+    letter.isPressed = false;
+    letter.confirmedPose = {
+      groupPosition: letter.group.position.clone(),
+      groupRotation: letter.group.rotation.clone(),
+      meshPosition: letter.mesh.position.clone(),
+      meshRotation: letter.mesh.rotation.clone(),
+      meshScale: letter.mesh.scale.clone(),
+      restScale: letter.restScale,
+    };
+    if (this.selectedLetter === letter) {
+      this.transformControls.detach();
+      this.selectedLetter = null;
+    }
+    this.audio.stopMoveAudio();
+    this.audio.stopScaleAudio();
+    this.audio.resume().then(() => this.audio.playSparkle()).catch(() => {});
+
+    this.flashLetterGreen(letter);
+
+    const basePosition = letter.group.position.clone();
+    const baseScale = letter.mesh.scale.clone();
+    gsap.killTweensOf(letter.group.position);
+    gsap.killTweensOf(letter.mesh.scale);
+    letter.scaleTweenActive = true;
+    letter.scaleVelocity.set(0, 0, 0);
+    gsap.timeline({
+      onComplete: () => {
+        letter.group.position.copy(basePosition);
+        letter.mesh.rotation.copy(letter.confirmedPose.meshRotation);
+        letter.mesh.position.copy(letter.confirmedPose.meshPosition);
+        letter.mesh.scale.copy(baseScale);
+        letter.targetScale.setScalar(letter.restScale);
+        letter.scale = letter.restScale;
+        letter.scaleTweenActive = false;
+        this.confirmedLetters.add(letter.id);
+        this.statusText.textContent = `${letter.id} confirmada · ${this.confirmedLetters.size}/${LETTER_SEQUENCE.length}`;
+        if (this.confirmedLetters.size === LETTER_SEQUENCE.length) this.beginVictoryCycle();
+      },
+    }).to(letter.group.position, {
+      y: basePosition.y + 0.34,
+      duration: 0.13,
+      ease: 'power2.out',
+    }, 0).to(letter.mesh.scale, {
+      x: baseScale.x * 1.08,
+      y: baseScale.y * 0.94,
+      z: baseScale.z * 1.04,
+      duration: 0.13,
+      ease: 'power2.out',
+    }, 0).to(letter.group.position, {
+      y: basePosition.y,
+      duration: 0.24,
+      ease: 'bounce.out',
+    }, 0.13).to(letter.mesh.scale, {
+      x: baseScale.x,
+      y: baseScale.y,
+      z: baseScale.z,
+      duration: 0.24,
+      ease: 'elastic.out(1, 0.42)',
+    }, 0.13);
+  }
+
+  flashLetterGreen(letter) {
+    letter.confirmationProgress = 1;
+    gsap.killTweensOf(letter, 'confirmationProgress');
+    gsap.to(letter, {
+      confirmationProgress: 0,
+      duration: 0.48,
+      ease: 'power2.out',
     });
   }
 
@@ -1496,7 +1542,10 @@ class ABDApp {
   beginVictoryCycle() {
     if (this.state === 'celebrating' || this.victoryTimeline) return;
     this.state = 'celebrating';
+    this.victoryBackgroundIndex = null;
     this.canvas.style.pointerEvents = 'none';
+    this.statusText.textContent = '¡Composición confirmada!';
+    this.audio.playProgressDing();
     const songDuration = this.audio.trackBuffer?.duration ?? 10;
     const bounceDuration = 0.52;
     const bounceSpacing = 0.68;
@@ -1504,26 +1553,32 @@ class ABDApp {
       VICTORY_BOUNCE_ORDER.length,
       Math.floor((songDuration - bounceDuration) / bounceSpacing) + 1,
     );
-    this.letters.forEach((letter) => {
-      const home = GOAL_POSITIONS[letter.id];
-      letter.group.position.set(home.x, home.y, 0);
-      letter.group.rotation.set(0, 0, 0);
-      letter.mesh.position.set(0, 0, 0);
-      letter.mesh.rotation.set(GOAL_ROTATION.x, GOAL_ROTATION.y, 0);
-    });
+    const confirmedPoses = new Map(this.letters.map((letter) => [
+      letter.id,
+      letter.confirmedPose ?? {
+        groupPosition: letter.group.position.clone(),
+        groupRotation: letter.group.rotation.clone(),
+        meshPosition: letter.mesh.position.clone(),
+        meshRotation: letter.mesh.rotation.clone(),
+        meshScale: letter.mesh.scale.clone(),
+        restScale: letter.restScale,
+      },
+    ]));
 
     const timeline = gsap.timeline({
       defaults: { ease: 'elastic.out(1, 0.42)' },
       onComplete: () => {
         this.victoryTimeline = null;
         this.letters.forEach((letter) => {
-          const home = GOAL_POSITIONS[letter.id];
-          const targetScale = LETTER_TARGET_SCALES[letter.id];
-          letter.group.position.set(home.x, home.y, 0);
-          letter.mesh.scale.setScalar(letter.baseModelScale * targetScale);
-          letter.scale = targetScale;
-          letter.restScale = targetScale;
-          letter.targetScale.setScalar(targetScale);
+          const pose = confirmedPoses.get(letter.id);
+          letter.group.position.copy(pose.groupPosition);
+          letter.group.rotation.copy(pose.groupRotation);
+          letter.mesh.position.copy(pose.meshPosition);
+          letter.mesh.rotation.copy(pose.meshRotation);
+          letter.mesh.scale.copy(pose.meshScale);
+          letter.scale = pose.restScale;
+          letter.restScale = pose.restScale;
+          letter.targetScale.setScalar(pose.restScale);
           letter.scaleTweenActive = false;
         });
       },
@@ -1538,19 +1593,20 @@ class ABDApp {
       const letter = this.letters.find((item) => item.id === id);
       if (!letter) return;
       letter.scaleTweenActive = true;
-      const home = GOAL_POSITIONS[id];
+      const pose = confirmedPoses.get(id);
+      const home = pose.groupPosition;
       const offset = step * bounceSpacing;
-      const baseScale = letter.baseModelScale * LETTER_TARGET_SCALES[id];
+      const baseScale = pose.meshScale;
       timeline.to(letter.mesh.scale, {
-        x: baseScale * 1.16,
-        y: baseScale * 0.84,
-        z: baseScale * 1.04,
+        x: baseScale.x * 1.16,
+        y: baseScale.y * 0.84,
+        z: baseScale.z * 1.04,
         duration: 0.16,
         ease: 'power2.out',
       }, offset).to(letter.mesh.scale, {
-        x: baseScale,
-        y: baseScale,
-        z: baseScale,
+        x: baseScale.x,
+        y: baseScale.y,
+        z: baseScale.z,
         duration: bounceDuration - 0.16,
         ease: 'elastic.out(1, 0.36)',
       }, offset + 0.16);
@@ -1561,7 +1617,7 @@ class ABDApp {
       }, offset).to(letter.group.position, {
         x: home.x,
         y: home.y,
-        z: 0,
+        z: home.z,
         duration: bounceDuration - 0.16,
         ease: 'elastic.out(1, 0.42)',
       }, offset + 0.13);
@@ -1579,46 +1635,33 @@ class ABDApp {
   resetChaos() {
     this.state = 'playing';
     this.canvas.style.pointerEvents = 'auto';
+    const stage = document.querySelector('.stage-shell');
+    stage.style.removeProperty('background-color');
+    stage.style.removeProperty('--stage-dot-color');
     this.audio.stopMoveAudio();
     this.audio.stopScaleAudio();
-    this.letters.forEach((letter) => this.audio.stopRotateAudio(letter.id));
     this.scrambleLetters();
-    this.goalColor = resolveNextGoalColor(PALETTE);
+    this.goalColors = this.createGoalColors(this.goalColors);
     this.statusText.textContent = 'Nueva ronda';
-  }
-
-  checkWinCondition() {
-    if (this.state !== 'playing') return;
-
-    const ready = evaluateGoalState({
-      letters: this.letters.map((letter) => ({
-        id: letter.id,
-        x: letter.x,
-        y: letter.y,
-        scale: letter.scale,
-        color: letter.color,
-        rotation: letter.mesh.rotation,
-      })),
-      objective: { color: this.goalColor },
-      positions: {
-        A: GOAL_POSITIONS.A,
-        B: GOAL_POSITIONS.B,
-        D: GOAL_POSITIONS.D,
-      },
-      rotations: { A: GOAL_ROTATION, B: GOAL_ROTATION, D: GOAL_ROTATION },
-      targetScale: TARGET_SCALE,
-      targetScales: LETTER_TARGET_SCALES,
-      tolerance: 0.8,
-    });
-
-    if (ready) {
-      this.beginVictoryCycle();
-    }
   }
 
   animate(now) {
     const elapsed = now * 0.001;
     this.stickerManager?.update(elapsed);
+    if (this.state === 'celebrating') {
+      const backgroundIndex = Math.floor(elapsed * 1.25) % PAINT_COLORS.length;
+      if (backgroundIndex !== this.victoryBackgroundIndex) {
+        const stage = document.querySelector('.stage-shell');
+        const color = new THREE.Color(PAINT_COLORS[backgroundIndex]);
+        const background = color.clone().lerp(new THREE.Color('#ffffff'), 0.82);
+        stage.style.backgroundColor = `#${background.getHexString()}`;
+        stage.style.setProperty(
+          '--stage-dot-color',
+          `rgba(${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)}, 0.22)`,
+        );
+        this.victoryBackgroundIndex = backgroundIndex;
+      }
+    }
     this.glitterLights?.forEach((light, index) => {
       const phase = index * Math.PI * 2 / this.glitterLights.length;
       light.position.set(
@@ -1632,13 +1675,9 @@ class ABDApp {
       const metrics = this.getLetterMetrics(letter);
       const progress = this.getLetterProgress(letter, metrics);
       this.audio.updateLetter(letter, progress);
-      if (this.state === 'playing') this.updateTargetFeedback(letter);
-      const poseCorrect = this.isLetterPoseCorrect(metrics);
-      if (poseCorrect && !letter.solved) {
-        letter.solved = true;
-        this.audio.playProgressDing();
-      } else if (!poseCorrect) {
-        letter.solved = false;
+      if (this.state === 'playing' && !letter.locked && !letter.isInteracting && !letter.isPressed) {
+        this.updateTargetFeedback(letter, metrics);
+        if (this.isLetterPoseCorrect(metrics)) this.playLetterConfirmation(letter);
       }
 
       const goal = GOAL_POSITIONS[letter.id];
@@ -1649,7 +1688,7 @@ class ABDApp {
       const approach = THREE.MathUtils.smoothstep(poseError, 5.2, 0.18);
       const ditherOpacity = 0.82 + approach * 0.18;
 
-      if (!letter.isInteracting && !letter.scaleTweenActive && this.state === 'playing') {
+      if (!letter.locked && !letter.isInteracting && !letter.scaleTweenActive && this.state === 'playing') {
         letter.group.position.y = letter.y + Math.sin(elapsed * 1.7 + letter.wobbleSeed) * 0.04;
         const age = elapsed - letter.jellyAt;
         const bounce = age >= 0 ? letter.jellyStrength * Math.exp(-age * 6.5) * Math.sin(age * 18) : 0;
@@ -1659,6 +1698,15 @@ class ABDApp {
           letter.restScale * (1 - breathing * 0.5 - bounce * 0.58),
           letter.restScale,
         );
+      } else if (letter.locked && letter.confirmedPose && this.state === 'playing') {
+        const hop = (Math.sin(elapsed * 5 + letter.wobbleSeed) + 1) * 0.5;
+        letter.group.position.copy(letter.confirmedPose.groupPosition);
+        letter.group.position.y += hop * 0.14;
+        letter.mesh.scale.set(
+          letter.confirmedPose.meshScale.x * (1 + hop * 0.025),
+          letter.confirmedPose.meshScale.y * (1 - hop * 0.035),
+          letter.confirmedPose.meshScale.z * (1 + hop * 0.012),
+        );
       }
 
       if (this.state === 'celebrating') {
@@ -1667,6 +1715,7 @@ class ABDApp {
         const hsl = {};
         victoryColor.getHSL(hsl);
         victoryColor.setHSL(hsl.h, Math.max(hsl.s, 0.96), THREE.MathUtils.clamp(hsl.l, 0.42, 0.52));
+        victoryColor.lerp(LETTER_CONFIRMATION_COLOR, letter.confirmationProgress);
         letter.mesh.traverse((child) => {
           if (child.isMesh && child.material) {
             child.material.color.copy(victoryColor);
@@ -1678,15 +1727,15 @@ class ABDApp {
         letter.mesh.traverse((child) => {
           if (child.isMesh && child.material) {
             child.material.opacity = ditherOpacity;
-            const targetColor = new THREE.Color(letter.targetColor);
+            const targetColor = new THREE.Color(letter.targetColor).lerp(LETTER_CONFIRMATION_COLOR, letter.confirmationProgress);
             child.material.color.lerp(targetColor, 0.12);
-            child.material.emissive = new THREE.Color(letter.targetColor).multiplyScalar(0.24);
+            child.material.emissive = targetColor.clone().multiplyScalar(0.24);
             child.material.emissiveIntensity = 0.35;
           }
         });
       }
 
-      if (!letter.isManualTransform && !letter.scaleTweenActive) {
+      if (!letter.locked && !letter.isManualTransform && !letter.scaleTweenActive) {
         letter.scaleVelocity.x += (letter.targetScale.x - letter.mesh.scale.x / letter.baseModelScale) * 0.18;
         letter.scaleVelocity.y += (letter.targetScale.y - letter.mesh.scale.y / letter.baseModelScale) * 0.18;
         letter.scaleVelocity.z += (letter.targetScale.z - letter.mesh.scale.z / letter.baseModelScale) * 0.18;
@@ -1699,7 +1748,6 @@ class ABDApp {
       letter.scale = ((letter.mesh.scale.x + letter.mesh.scale.y) * 0.5) / letter.baseModelScale;
     });
 
-    this.checkWinCondition();
     this.renderer.render(this.scene, this.camera);
     requestAnimationFrame(this.animate);
   }

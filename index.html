@@ -32,9 +32,9 @@
             <div class="help-dropdown-title">Guía rápida</div>
             <p>Pinta las letras, encuentra sus colores y acomódalas hasta formar el logo.</p>
             <ol>
-              <li>Elige una muestra de la paleta y toca una letra.</li>
-              <li>Arrastra para moverla; vuelve a tocar para dejarla fija.</li>
-              <li>Usa los gizmos para cambiar escala o rotación.</li>
+              <li>Activa el balde, elige un color y toca solo la letra que quieras pintar.</li>
+              <li>Usa seleccionar y arrastrar para acomodar las letras.</li>
+              <li>Usa los gizmos para cambiar la escala o rotar en los ejes X, Y y Z.</li>
             </ol>
             <button id="autoSolveButton" class="auto-solve-button" type="button">✦ Solucionador Mágico</button>
           </section>
@@ -44,9 +44,10 @@
       <section class="paint-workspace" aria-label="Espacio de dibujo">
         <aside class="paint-tools" aria-label="Herramientas">
           <button class="tool-button is-active" data-tool="select" type="button" title="Seleccionar y arrastrar" aria-label="Seleccionar y arrastrar">⌖</button>
+          <button class="tool-button" data-tool="paint" type="button" title="Balde de color" aria-label="Balde de color">🪣</button>
           <button class="tool-button" data-tool="move" type="button" title="Mover con gizmo" aria-label="Mover con gizmo">✥</button>
           <button class="tool-button" data-tool="scale" type="button" title="Escalar con gizmo" aria-label="Escalar con gizmo">⤢</button>
-          <button class="tool-button" data-tool="rotate" type="button" title="Rotar con gizmo" aria-label="Rotar con gizmo">⟳</button>
+          <button class="tool-button" data-tool="rotate" type="button" title="Rotar en X, Y y Z" aria-label="Rotar en X, Y y Z">⟳</button>
           <span class="tool-divider"></span>
           <span class="tool-caption">Herramientas</span>
         </aside>

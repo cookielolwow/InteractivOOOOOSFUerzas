@@ -1,5 +1,5 @@
 const STICKER_FILES = [
-  'considerable puffy dog sticker.jpg',
+  'considerable puffy dog sticker cutout.png',
   'gato sticker.png',
   'otro sticker.png',
   'sticker 4.png',
