@@ -10,7 +10,7 @@ const STICKER_FILES = [
   'sticker5.png',
 ];
 
-const STICKER_INSTANCES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 6];
+const STICKER_INSTANCES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 6, 0, 5, 8];
 
 function seededRandom(seed) {
   let value = seed + 0x6d2b79f5;
@@ -41,8 +41,8 @@ export class HolographicStickerDOMManager {
 
       sticker.className = 'ui-sticker';
       sticker.setAttribute('aria-hidden', 'true');
-      sticker.dataset.zone = instanceIndex < 3 ? 'menu' : instanceIndex < 9 ? 'rail' : 'footer';
-      sticker.style.setProperty('--sticker-scale', (0.88 + random * 0.34).toFixed(2));
+      sticker.dataset.zone = instanceIndex < 3 ? 'menu' : instanceIndex < 10 ? 'rail' : 'footer';
+      sticker.style.setProperty('--sticker-scale', (1.1 + random * 0.32).toFixed(2));
       sticker.style.setProperty('--sticker-rotation', `${(-17 + random * 34).toFixed(1)}deg`);
       sticker.style.setProperty('--sticker-float', `${(-1 + random * 2).toFixed(1)}px`);
       sticker.style.setProperty('--mouse-x', '50%');
@@ -130,18 +130,18 @@ export class HolographicStickerDOMManager {
       let maxHeight;
 
       if (zone === 'menu') {
-        maxWidth = Math.max(10, Math.min(42, menuWidth * 0.48));
+        maxWidth = Math.max(10, Math.min(58, menuWidth * 0.48));
         maxHeight = Math.max(12, menuRect.height - 2);
         x = menuStart + maxWidth * 0.5 + jitterX * Math.max(0, menuWidth - maxWidth);
         y = menuRect.top - root.top + maxHeight * 0.5 + jitterY * Math.max(0, menuRect.height - maxHeight);
       } else if (zone === 'rail') {
-        maxWidth = Math.max(10, Math.min(42, railWidth * 0.88));
-        maxHeight = Math.min(48, Math.max(12, railBottom - railTop));
+        maxWidth = Math.max(10, Math.min(68, railWidth * 0.92));
+        maxHeight = Math.min(62, Math.max(12, railBottom - railTop));
         x = railLeft + maxWidth * 0.5 + jitterX * Math.max(0, railWidth - maxWidth);
         y = railTop + maxHeight * 0.5 + jitterY * Math.max(0, railBottom - railTop - maxHeight);
       } else {
-        maxWidth = Math.max(10, Math.min(52, footerWidth * 0.34));
-        maxHeight = Math.max(12, Math.min(46, footerHeight * 0.54));
+        maxWidth = Math.max(10, Math.min(72, footerWidth * 0.42));
+        maxHeight = Math.max(12, Math.min(66, footerHeight * 0.72));
         x = footerStart + maxWidth * 0.5 + jitterX * Math.max(0, footerWidth - maxWidth);
         y = footerTop + maxHeight * 0.5 + jitterY * Math.max(0, footerHeight - maxHeight);
       }
@@ -155,7 +155,7 @@ export class HolographicStickerDOMManager {
       const projectedWidth = Math.abs(Math.cos(radians)) * aspect + Math.abs(Math.sin(radians));
       const projectedHeight = Math.abs(Math.sin(radians)) * aspect + Math.abs(Math.cos(radians));
       let imageHeight = Math.min(
-        48 * (0.75 + jitterY * 0.3),
+        66 * (0.78 + jitterY * 0.3),
         maxHeight / (scale * projectedHeight),
         maxWidth / (scale * projectedWidth),
       );

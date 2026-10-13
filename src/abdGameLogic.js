@@ -39,8 +39,11 @@ export function evaluateGoalState({
   letters,
   objective,
   positions,
+  rotations = {},
+  targetScales = {},
   targetScale = 1,
   tolerance = 0.12,
+  rotationTolerance = 0.22,
 }) {
   if (!letters?.length || !objective) return false;
 
@@ -51,12 +54,22 @@ export function evaluateGoalState({
     if (!match) return false;
 
     const pos = positions?.[letterId] ?? { x: 0, y: 0 };
+    const rotation = rotations?.[letterId] ?? { x: 0, y: 0, z: 0 };
+    const actualRotation = match.rotation ?? { x: 0, y: 0, z: 0 };
     const dx = match.x - pos.x;
     const dy = match.y - pos.y;
     const positionOkay = Math.hypot(dx, dy) <= tolerance;
-    const scaleOkay = Math.abs(match.scale - targetScale) <= 0.18;
+    const expectedScale = targetScales?.[letterId] ?? targetScale;
+    const scaleOkay = Math.abs(match.scale - expectedScale) <= 0.18;
     const colorOkay = colorDistance(match.color, objective.color) <= 60;
+    const rotationOkay = ['x', 'y', 'z'].every((axis) => {
+      const difference = Math.atan2(
+        Math.sin(actualRotation[axis] - rotation[axis]),
+        Math.cos(actualRotation[axis] - rotation[axis]),
+      );
+      return Math.abs(difference) <= rotationTolerance;
+    });
 
-    return positionOkay && scaleOkay && colorOkay;
+    return positionOkay && scaleOkay && colorOkay && rotationOkay;
   });
 }

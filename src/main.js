@@ -9,15 +9,19 @@ import { PALETTE, colorDistance, evaluateGoalState, resolveNextGoalColor } from 
 
 const LETTER_SEQUENCE = ['A', 'B', 'D'];
 const PAINT_COLORS = [
-  '#ff5a1f', '#ff8738', '#ff1688', '#ff57ad', '#ffe600',
-  '#fff36a', '#a8ed00', '#64ce16', '#075bff', '#2aa8ff',
-  '#19d9dc', '#713cff', '#f9f1dc', '#3d3046', '#1b2434',
+  '#ff3d00', '#ff6d00', '#ff1744', '#ff006e', '#ff2e9f',
+  '#ffd600', '#b8ff00', '#00e676', '#00c853', '#00f5d4',
+  '#00d1ff', '#00a8ff', '#0057ff', '#4833ff', '#a100ff',
 ];
+const TARGET_SCALE = 2.6;
+const LETTER_TARGET_SCALES = { A: TARGET_SCALE * 0.85, B: TARGET_SCALE, D: TARGET_SCALE * 1.15 };
+const VICTORY_BOUNCE_ORDER = ['A', 'B', 'D', 'A', 'B', 'D', 'A', 'B', 'D'];
 const GOAL_POSITIONS = {
-  A: { x: -1.15, y: -0.12 },
-  B: { x: 0.05, y: -0.12 },
-  D: { x: 1.28, y: -0.12 },
+  A: { x: -1.15 * TARGET_SCALE, y: -0.95 * TARGET_SCALE },
+  B: { x: 0.05 * TARGET_SCALE, y: -0.95 * TARGET_SCALE },
+  D: { x: 1.28 * TARGET_SCALE, y: -0.95 * TARGET_SCALE },
 };
+const GOAL_ROTATION = { x: 0, y: -Math.PI * 0.15, z: 0 };
 const START_POSITIONS = {
   A: { x: -4.4, y: -2.1 },
   B: { x: 0, y: 0.1 },
@@ -25,7 +29,7 @@ const START_POSITIONS = {
 };
 const START_SCALES = { A: 0.72, B: 0.88, D: 0.66 };
 
-class AudioManager {
+class FrutigerAudioEngine {
   constructor() {
     const AudioCtor = window.AudioContext || window.webkitAudioContext;
     this.ctx = AudioCtor ? new AudioCtor() : null;
@@ -44,6 +48,16 @@ class AudioManager {
     this.trackBuffer = null;
     this.trackSource = null;
     this.ducked = false;
+    this.moveVoice = null;
+    this.scaleVoice = null;
+    this.rotateErrors = new Map();
+    this.alignedRotations = new Set();
+    this.reverb = this.ctx.createConvolver();
+    this.reverb.buffer = this.createReverbImpulse(2.4, 2.1);
+    this.reverbGain = this.ctx.createGain();
+    this.reverbGain.gain.value = 0.38;
+    this.reverb.connect(this.reverbGain);
+    this.reverbGain.connect(this.foleyBus);
   }
 
   async resume() {
@@ -57,6 +71,20 @@ class AudioManager {
     bus.gain.value = level;
     bus.connect(this.masterGain);
     return bus;
+  }
+
+  createReverbImpulse(duration, decay) {
+    const length = Math.floor(this.ctx.sampleRate * duration);
+    const impulse = this.ctx.createBuffer(2, length, this.ctx.sampleRate);
+    for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
+      const samples = impulse.getChannelData(channel);
+      for (let index = 0; index < length; index += 1) {
+        const progress = index / length;
+        const softNoise = (Math.random() * 2 - 1) * 0.35;
+        samples[index] = softNoise * (1 - progress) ** decay;
+      }
+    }
+    return impulse;
   }
 
   async loadLetterEffects() {
@@ -78,52 +106,34 @@ class AudioManager {
     }
   }
 
-  async loadFinalTrack() {
-    if (!this.ctx) return null;
-    try {
-      const response = await fetch('/cansioncita fina.MP3');
-      if (!response.ok) return null;
-      this.trackBuffer = await this.ctx.decodeAudioData((await response.arrayBuffer()).slice(0));
-      return this.trackBuffer;
-    } catch (error) {
-      console.warn('No se pudo cargar la canción final.', error);
-      return null;
-    }
-  }
-
   playLetterSound(letterId, letter, progress = 0) {
     if (!this.ctx) return;
-
     const buffer = this.soundMap[letterId];
     if (!buffer) return;
-
     const previous = this.activeLetterVoices.get(letterId);
     if (previous) this.fadeVoice(previous, 0.045);
 
     const source = this.ctx.createBufferSource();
     const filter = this.ctx.createBiquadFilter();
     const gain = this.ctx.createGain();
-    const scalePitch = 1.04 - ((letter?.scale ?? 1) - 1) * 0.22;
+    const scalePitch = 1.04 - ((letter?.scale ?? TARGET_SCALE) - TARGET_SCALE) * 0.12;
     const playbackRate = THREE.MathUtils.clamp(scalePitch, 0.85, 1.25);
     const now = this.ctx.currentTime;
     const duration = buffer.duration / playbackRate;
-
     source.buffer = buffer;
     source.playbackRate.setValueAtTime(playbackRate, now);
     filter.type = 'lowpass';
-    const sizeCutoff = THREE.MathUtils.clamp(5700 - ((letter?.scale ?? 1) - 1) * 2600, 900, 6000);
-    const startCutoff = sizeCutoff * 0.42;
-    filter.frequency.setValueAtTime(THREE.MathUtils.lerp(startCutoff, sizeCutoff, progress), now);
-    filter.Q.setValueAtTime(0.7 + progress * 0.8 + Math.max(0, 1 - (letter?.scale ?? 1)) * 0.35, now);
+    filter.frequency.setValueAtTime(THREE.MathUtils.lerp(1900, 5600, progress), now);
+    filter.Q.setValueAtTime(0.7 + progress * 0.5, now);
     source.connect(filter);
     filter.connect(gain);
     gain.connect(this.letterBus);
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.linearRampToValueAtTime(0.58, now + 0.035);
-    gain.gain.setValueAtTime(0.58, now + Math.max(0.06, duration - 0.09));
+    gain.gain.linearRampToValueAtTime(0.42, now + 0.035);
+    gain.gain.setValueAtTime(0.42, now + Math.max(0.06, duration - 0.09));
     gain.gain.linearRampToValueAtTime(0.0001, now + duration);
 
-    const voice = { source, filter, gain, playbackRate };
+    const voice = { source, filter, gain };
     this.activeLetterVoices.set(letterId, voice);
     source.onended = () => {
       source.disconnect();
@@ -138,30 +148,207 @@ class AudioManager {
   updateLetter(letter, progress) {
     const voice = this.activeLetterVoices.get(letter?.id);
     if (!this.ctx || !voice) return;
-
-    // Position, scale, and color errors normalize to progress; progress opens the filter toward the scale-specific target cutoff.
     const now = this.ctx.currentTime;
-    const sizeCutoff = THREE.MathUtils.clamp(5700 - ((letter.scale || 1) - 1) * 2600, 900, 6000);
-    const closedCutoff = sizeCutoff * 0.42;
-    const cutoff = THREE.MathUtils.lerp(closedCutoff, sizeCutoff, progress);
-    const sizeResonance = Math.max(0, 1 - (letter.scale || 1)) * 0.35;
-    voice.filter.frequency.setTargetAtTime(cutoff, now, 0.12);
-    voice.filter.Q.setTargetAtTime(0.7 + progress * 0.8 + sizeResonance, now, 0.14);
+    voice.filter.frequency.setTargetAtTime(THREE.MathUtils.lerp(1900, 5600, progress), now, 0.12);
+    voice.filter.Q.setTargetAtTime(0.7 + progress * 0.5, now, 0.14);
   }
 
   playGrab() {
     if (!this.ctx) return;
     const oscillator = this.ctx.createOscillator();
-    const now = this.ctx.currentTime;
     const gain = this.ctx.createGain();
+    const now = this.ctx.currentTime;
     oscillator.type = 'sine';
     oscillator.frequency.setValueAtTime(520, now);
     oscillator.frequency.exponentialRampToValueAtTime(190, now + 0.12);
     oscillator.connect(gain);
     gain.connect(this.foleyBus);
-    this.envelope(gain, now, 0.0001, 0.075, 0.035, 0.19);
+    this.envelope(gain, now, 0.0001, 0.065, 0.035, 0.19);
     oscillator.start(now);
     oscillator.stop(now + 0.19);
+    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+  }
+
+  async loadFinalTrack() {
+    if (!this.ctx) return null;
+    try {
+      const response = await fetch('/cansioncita fina.MP3');
+      if (!response.ok) return null;
+      this.trackBuffer = await this.ctx.decodeAudioData((await response.arrayBuffer()).slice(0));
+      return this.trackBuffer;
+    } catch (error) {
+      console.warn('No se pudo cargar la canción final.', error);
+      return null;
+    }
+  }
+
+  createGuideVoice(frequency, cutoff, level, type = 'sine') {
+    const oscillator = this.ctx.createOscillator();
+    const filter = this.ctx.createBiquadFilter();
+    const gain = this.ctx.createGain();
+    const now = this.ctx.currentTime;
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, now);
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(cutoff, now);
+    filter.Q.value = 0.65;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(level, now + 0.12);
+    oscillator.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.foleyBus);
+    oscillator.start(now);
+    return { oscillator, filter, gain };
+  }
+
+  fadeGuideVoice(voice, duration = 0.16) {
+    if (!this.ctx || !voice) return;
+    const now = this.ctx.currentTime;
+    voice.gain.gain.cancelScheduledValues(now);
+    voice.gain.gain.setValueAtTime(Math.max(voice.gain.gain.value, 0.0001), now);
+    voice.gain.gain.linearRampToValueAtTime(0.0001, now + duration);
+    voice.oscillator.stop(now + duration + 0.02);
+    voice.oscillator.onended = () => {
+      voice.oscillator.disconnect();
+      voice.filter.disconnect();
+      voice.gain.disconnect();
+    };
+  }
+
+  startMoveAudio(letterId) {
+    if (!this.ctx || (this.moveVoice && this.moveVoice.letterId === letterId)) return;
+    this.stopMoveAudio();
+    this.resume().catch(() => {});
+    const voice = this.createGuideVoice(190, 300, 0.052);
+    voice.letterId = letterId;
+    this.moveVoice = voice;
+  }
+
+  updateMoveAudio(distance) {
+    if (!this.ctx || !this.moveVoice) return;
+    const proximity = 1 - THREE.MathUtils.clamp(distance / 6, 0, 1);
+    const now = this.ctx.currentTime;
+    this.moveVoice.filter.frequency.setTargetAtTime(THREE.MathUtils.lerp(300, 5200, proximity), now, 0.12);
+    this.moveVoice.oscillator.frequency.setTargetAtTime(THREE.MathUtils.lerp(175, 285, proximity), now, 0.16);
+    this.moveVoice.gain.gain.setTargetAtTime(0.028 + proximity * 0.034, now, 0.16);
+  }
+
+  stopMoveAudio() {
+    if (!this.moveVoice) return;
+    this.fadeGuideVoice(this.moveVoice);
+    this.moveVoice = null;
+  }
+
+  startScaleAudio(letterId) {
+    if (!this.ctx || (this.scaleVoice && this.scaleVoice.letterId === letterId)) return;
+    this.stopScaleAudio();
+    this.resume().catch(() => {});
+    const voice = this.createGuideVoice(523.25, 1100, 0.06, 'sine');
+    voice.letterId = letterId;
+    this.scaleVoice = voice;
+  }
+
+  updateScaleAudio(deltaScale) {
+    if (!this.ctx || !this.scaleVoice) return;
+    const semitones = THREE.MathUtils.clamp(deltaScale * 9, -12, 12);
+    const proximity = 1 - THREE.MathUtils.clamp(Math.abs(deltaScale) / 0.8, 0, 1);
+    const now = this.ctx.currentTime;
+    this.scaleVoice.oscillator.frequency.setTargetAtTime(523.25 * (2 ** (semitones / 12)), now, 0.18);
+    this.scaleVoice.filter.frequency.setTargetAtTime(THREE.MathUtils.lerp(850, 4200, proximity), now, 0.18);
+    this.scaleVoice.gain.gain.setTargetAtTime(0.035 + proximity * 0.04, now, 0.18);
+  }
+
+  stopScaleAudio() {
+    if (!this.scaleVoice) return;
+    this.fadeGuideVoice(this.scaleVoice);
+    this.scaleVoice = null;
+  }
+
+  startRotateAudio(letterId) {
+    this.rotateErrors.delete(letterId);
+    this.alignedRotations.delete(letterId);
+  }
+
+  triggerRotateAudio(angleError, letterId) {
+    if (!this.ctx) return;
+    const error = Math.abs(angleError);
+    const previousError = this.rotateErrors.get(letterId);
+    const aligned = error <= 0.22;
+    if (aligned && !this.alignedRotations.has(letterId)) {
+      this.playRotationSuccessChord();
+      this.alignedRotations.add(letterId);
+    } else if (!aligned) {
+      this.alignedRotations.delete(letterId);
+      if (previousError !== undefined && Math.abs(error - previousError) >= 0.1) this.playRotateTick();
+    }
+    this.rotateErrors.set(letterId, error);
+  }
+
+  stopRotateAudio(letterId) {
+    this.rotateErrors.delete(letterId);
+    this.alignedRotations.delete(letterId);
+  }
+
+  playRotateTick() {
+    const now = this.ctx.currentTime;
+    const oscillator = this.ctx.createOscillator();
+    const filter = this.ctx.createBiquadFilter();
+    const gain = this.ctx.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(1046.5, now);
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(3600, now);
+    oscillator.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.foleyBus);
+    this.envelope(gain, now, 0.0001, 0.025, 0.008, 0.14);
+    oscillator.start(now);
+    oscillator.stop(now + 0.16);
+    oscillator.onended = () => { oscillator.disconnect(); filter.disconnect(); gain.disconnect(); };
+  }
+
+  playRotationSuccessChord() {
+    const now = this.ctx.currentTime;
+    [261.63, 329.63, 392, 493.88].forEach((frequency, index) => {
+      const oscillator = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const start = now + index * 0.018;
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequency, start);
+      oscillator.connect(gain);
+      gain.connect(this.foleyBus);
+      gain.connect(this.reverb);
+      this.envelope(gain, start, 0.0001, 0.038, 0.045, 2.25);
+      oscillator.start(start);
+      oscillator.stop(start + 2.3);
+      oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+    });
+  }
+
+  playParameterCheck(parameter) {
+    if (!this.ctx) return;
+    const roots = { position: 659.25, scale: 783.99, color: 1046.5 };
+    const root = roots[parameter];
+    if (!root) return;
+    const now = this.ctx.currentTime;
+    [root, root * 1.5].forEach((frequency, index) => {
+      const oscillator = this.ctx.createOscillator();
+      const filter = this.ctx.createBiquadFilter();
+      const gain = this.ctx.createGain();
+      const start = now + index * 0.018;
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequency, start);
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(5200, start);
+      oscillator.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.foleyBus);
+      gain.connect(this.reverb);
+      this.envelope(gain, start, 0.0001, index === 0 ? 0.07 : 0.035, 0.018, 0.48);
+      oscillator.start(start);
+      oscillator.stop(start + 0.5);
+      oscillator.onended = () => { oscillator.disconnect(); filter.disconnect(); gain.disconnect(); };
+    });
   }
 
   startDrag(letter) {
@@ -337,6 +524,7 @@ class ABDApp {
     this.pressedLetter = null;
     this.pressCandidate = null;
     this.autoSolveTimeline = null;
+    this.victoryTimeline = null;
     this.pointer = new THREE.Vector2();
     this.particlePointer = new THREE.Vector3(100, 100, -2.8);
     this.particlePointerActive = false;
@@ -362,8 +550,6 @@ class ABDApp {
     this.renderer.toneMappingExposure = 0.78;
     this.pmrem = new THREE.PMREMGenerator(this.renderer);
     this.scene.environment = this.pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-    this.clayGrain = this.createSurfaceTexture();
-    this.ditherMap = this.createDitherTexture();
     this.transformControls = new TransformControls(this.camera, this.canvas);
     this.scene.add(this.transformControls.getHelper());
     this.transformControls.setSize(0.9);
@@ -372,13 +558,26 @@ class ABDApp {
         this.draggedLetter = null;
         if (this.selectedLetter) {
           this.selectedLetter.isPressed = true;
+          this.selectedLetter.isInteracting = true;
+          this.selectedLetter.isManualTransform = this.activeTool === 'scale' || this.activeTool === 'rotate';
+          this.selectedLetter.scaleVelocity.set(0, 0, 0);
+          gsap.killTweensOf(this.selectedLetter.mesh.scale);
+          this.selectedLetter.scaleTweenActive = false;
           this.pressedLetter = this.selectedLetter;
+          if (this.activeTool === 'move') this.audio.startMoveAudio(this.selectedLetter.id);
+          if (this.activeTool === 'scale') this.audio.startScaleAudio(this.selectedLetter.id);
+          if (this.activeTool === 'rotate') this.audio.startRotateAudio(this.selectedLetter.id);
         }
         this.audio.startDrag(this.selectedLetter);
       } else if (this.selectedLetter) {
         this.selectedLetter.isPressed = false;
+        this.selectedLetter.isInteracting = false;
+        this.selectedLetter.isManualTransform = false;
         this.pressedLetter = null;
         this.audio.stopDrag(this.selectedLetter);
+        this.audio.stopMoveAudio();
+        this.audio.stopScaleAudio();
+        this.audio.stopRotateAudio(this.selectedLetter.id);
         this.audio.playDrop();
         this.playJellyBounce(this.selectedLetter, 0.18);
       }
@@ -386,14 +585,13 @@ class ABDApp {
     this.transformControls.addEventListener('objectChange', () => this.syncSelectedTransform());
 
     this.loader = new FBXLoader();
-    this.audio = new AudioManager();
+    this.audio = new FrutigerAudioEngine();
     this.stickerManager = new HolographicStickerDOMManager({
       mount: document.getElementById('uiStickerField'),
     });
 
     this.buildPalette();
     this.setupLights();
-    this.createPlayroom();
     this.bindUI();
     this.resize();
     this.loadLetters();
@@ -420,44 +618,157 @@ class ABDApp {
   }
 
   setupLights() {
-    const ambient = new THREE.AmbientLight(0xffffff, 0.68);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
     this.scene.add(ambient);
 
-    const keyLight = new THREE.DirectionalLight(0xffd99b, 1.55);
+    const keyLight = new THREE.DirectionalLight(0xffe3b0, 1.8);
     keyLight.position.set(5, 8, 12);
+    keyLight.castShadow = true;
     this.scene.add(keyLight);
 
-    const rimLight = new THREE.DirectionalLight(0x18cfff, 0.58);
+    const rimLight = new THREE.DirectionalLight(0x74d9ff, 0.7);
     rimLight.position.set(-8, 5, -6);
     this.scene.add(rimLight);
 
-    const bounceLight = new THREE.PointLight(0xff3b9d, 0.32, 18);
+    const bounceLight = new THREE.PointLight(0xff6db7, 0.5, 18);
     bounceLight.position.set(0, -4, 7);
     this.scene.add(bounceLight);
+
+    this.glitterLights = [
+      new THREE.PointLight(0x28e4ff, 4.5, 18, 2),
+      new THREE.PointLight(0xff31a8, 4, 18, 2),
+      new THREE.PointLight(0xc8ff24, 3.5, 18, 2),
+    ];
+    this.glitterLights.forEach((light) => this.scene.add(light));
   }
 
-  createSurfaceTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 64;
-    canvas.height = 64;
-    const context = canvas.getContext('2d');
-    const image = context.createImageData(64, 64);
+  createBalloonMaterial(hexColor) {
+    const material = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(hexColor),
+      emissive: new THREE.Color(hexColor).multiplyScalar(0.08),
+      emissiveIntensity: 0.4,
+      roughness: 0.16,
+      metalness: 0,
+      transmission: 0.62,
+      thickness: 1,
+      ior: 1.2,
+      clearcoat: 0.95,
+      clearcoatRoughness: 0.1,
+      attenuationColor: new THREE.Color(hexColor),
+      attenuationDistance: 1.6,
+      envMapIntensity: 0.85,
+      transparent: false,
+      opacity: 1,
+    });
 
+    material.onBeforeCompile = (shader) => {
+      const fresnelVaryings = '\nvarying vec3 vABDBalloonWorldNormal;\nvarying vec3 vABDBalloonWorldPosition;';
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', `#include <common>${fresnelVaryings}`)
+        .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\nvABDBalloonWorldNormal = normalize(mat3(modelMatrix) * objectNormal);')
+        .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvABDBalloonWorldPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', `#include <common>${fresnelVaryings}`)
+        .replace(
+          '#include <output_fragment>',
+          'float abdFresnel = pow(1.0 - max(dot(normalize(vABDBalloonWorldNormal), normalize(cameraPosition - vABDBalloonWorldPosition)), 0.0), 2.8);\noutgoingLight += vec3(0.82, 0.94, 1.0) * abdFresnel * 0.38;\n#include <output_fragment>',
+        );
+    };
+    material.customProgramCacheKey = () => 'abd-balloon-fresnel-v1';
+    return material;
+  }
+
+  createGlitterNormalMap() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const context = canvas.getContext('2d');
+    const image = context.createImageData(512, 512);
     for (let index = 0; index < image.data.length; index += 4) {
-      const grain = 178 + Math.floor(Math.random() * 64);
-      image.data[index] = grain;
-      image.data[index + 1] = grain;
-      image.data[index + 2] = grain;
+      image.data[index] = 124 + Math.floor(Math.random() * 9);
+      image.data[index + 1] = 124 + Math.floor(Math.random() * 9);
+      image.data[index + 2] = 246 + Math.floor(Math.random() * 10);
       image.data[index + 3] = 255;
     }
     context.putImageData(image, 0, 0);
+
+    for (let flake = 0; flake < 10; flake += 1) {
+      const centerX = Math.random() * 512;
+      const centerY = Math.random() * 512;
+      const radius = 28 + Math.random() * 30;
+      const sides = 4 + Math.floor(Math.random() * 4);
+      let normalX = Math.random() * 1.1 - 0.55;
+      let normalY = Math.random() * 1.1 - 0.55;
+      const normalLength = Math.hypot(normalX, normalY);
+      if (normalLength > 0.72) {
+        normalX *= 0.72 / normalLength;
+        normalY *= 0.72 / normalLength;
+      }
+      const normalZ = Math.sqrt(1 - normalX ** 2 - normalY ** 2);
+      const normalColor = [normalX, normalY, normalZ]
+        .map((component) => Math.round((component * 0.5 + 0.5) * 255));
+      const rotation = Math.random() * Math.PI;
+      context.beginPath();
+      for (let side = 0; side < sides; side += 1) {
+        const angle = rotation + side * Math.PI * 2 / sides;
+        const distance = radius * (0.72 + Math.random() * 0.28);
+        const x = centerX + Math.cos(angle) * distance;
+        const y = centerY + Math.sin(angle) * distance;
+        if (side === 0) context.moveTo(x, y);
+        else context.lineTo(x, y);
+      }
+      context.closePath();
+      context.fillStyle = `rgb(${normalColor.join(',')})`;
+      context.fill();
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(10, 10);
+    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.colorSpace = THREE.NoColorSpace;
+    texture.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
+    return texture;
+  }
+
+  createGlitterAlbedoMap() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const context = canvas.getContext('2d');
+    context.fillStyle = '#b8b8b8';
+    context.fillRect(0, 0, 512, 512);
+
+    for (let flake = 0; flake < 8; flake += 1) {
+      const centerX = Math.random() * 512;
+      const centerY = Math.random() * 512;
+      const radius = 22 + Math.random() * 16;
+      const sides = 4 + Math.floor(Math.random() * 3);
+      const rotation = Math.random() * Math.PI;
+      context.beginPath();
+      for (let side = 0; side < sides; side += 1) {
+        const angle = rotation + side * Math.PI * 2 / sides;
+        const distance = radius * (0.68 + Math.random() * 0.32);
+        const x = centerX + Math.cos(angle) * distance;
+        const y = centerY + Math.sin(angle) * distance;
+        if (side === 0) context.moveTo(x, y);
+        else context.lineTo(x, y);
+      }
+      context.closePath();
+      context.fillStyle = `rgba(255, 255, 255, ${0.72 + Math.random() * 0.28})`;
+      context.fill();
+    }
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(3, 3);
+    texture.colorSpace = THREE.SRGBColorSpace;
     texture.magFilter = THREE.LinearFilter;
     texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
     return texture;
   }
 
@@ -498,82 +809,26 @@ class ABDApp {
     return texture;
   }
 
-  createPlayroom() {
-    const particleCount = 28;
-    const positions = new Float32Array(particleCount * 3);
-    const colors = new Float32Array(particleCount * 3);
-    const phases = new Float32Array(particleCount);
-    const velocities = new Float32Array(particleCount * 3);
-
-    for (let index = 0; index < particleCount; index += 1) {
-      const angle = index * 2.39996;
-      const radius = Math.sqrt((index + 0.5) / particleCount);
-      const x = Math.cos(angle) * radius * 7.3;
-      const y = Math.sin(angle) * radius * 4;
-      const color = new THREE.Color(PAINT_COLORS[index % PAINT_COLORS.length]);
-      positions.set([x, y, -2.8], index * 3);
-      colors.set([color.r, color.g, color.b], index * 3);
-      phases[index] = index * 0.73;
-    }
-
-    const particleGeometry = new THREE.BufferGeometry();
-    particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    this.confetti = new THREE.Points(particleGeometry, new THREE.PointsMaterial({
-      size: 0.075,
-      sizeAttenuation: true,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.58,
-      depthWrite: false,
-    }));
-    this.confetti.userData = { basePositions: positions.slice(), phases, velocities };
-    this.scene.add(this.confetti);
-
-    const doodlePositions = [
-      [-6.5, 3.1], [-2.3, 3.55], [5.2, 3.35], [6.65, 2.2],
-      [-6.7, -2.9], [-2.4, -3.65], [5.1, -3.35], [6.55, -2.5],
-    ];
-    this.doodleObjects = [];
-    doodlePositions.forEach(([x, y], index) => {
-      const material = new THREE.MeshPhysicalMaterial({
-        color: PAINT_COLORS[(index * 3 + 2) % PAINT_COLORS.length],
-        roughness: 0.42,
-        clearcoat: 0.48,
-        clearcoatRoughness: 0.28,
-      });
-      const geometry = index % 3 === 0
-        ? new THREE.TorusGeometry(0.2, 0.055, 8, 20)
-        : index % 3 === 1
-          ? new THREE.OctahedronGeometry(0.19, 0)
-          : new THREE.SphereGeometry(0.15, 14, 10);
-      const doodle = new THREE.Mesh(geometry, material);
-      doodle.position.set(x, y, -1.8);
-      doodle.rotation.z = index * 0.73;
-      doodle.userData = {
-        baseY: y,
-        phase: index * 0.91,
-        spin: (index % 2 ? 1 : -1) * (0.001 + index * 0.00012),
-      };
-      this.doodleObjects.push(doodle);
-      this.scene.add(doodle);
-    });
+  getTransformTarget(letter) {
+    if (!letter) return null;
+    return this.activeTool === 'scale' || this.activeTool === 'rotate' ? letter.mesh : letter.group;
   }
 
   syncSelectedTransform() {
     const letter = this.selectedLetter;
     if (!letter) return;
-    letter.x = letter.mesh.position.x;
-    letter.y = letter.mesh.position.y;
+    letter.x = letter.group.position.x;
+    letter.y = letter.group.position.y;
     const scaleX = letter.mesh.scale.x / letter.baseModelScale;
     const scaleY = letter.mesh.scale.y / letter.baseModelScale;
     const scaleZ = letter.mesh.scale.z / letter.baseModelScale;
     letter.restScale = (scaleX + scaleY + scaleZ) / 3;
     letter.scale = (scaleX + scaleY) * 0.5;
     letter.targetScale.set(scaleX, scaleY, scaleZ);
+    letter.scaleVelocity.set(0, 0, 0);
 
     if (letter.audioPose) {
-      const movement = letter.mesh.position.distanceTo(letter.audioPose.position);
+      const movement = letter.group.position.distanceTo(letter.audioPose.position);
       const angleDelta = (current, previous) => Math.atan2(Math.sin(current - previous), Math.cos(current - previous));
       const rotation = Math.hypot(
         angleDelta(letter.mesh.rotation.x, letter.audioPose.rotation.x),
@@ -588,7 +843,20 @@ class ABDApp {
       const intensity = THREE.MathUtils.clamp(movement * 2 + rotation * 1.4 + scaleChange, 0, 1);
       this.audio.updateDrag(letter, movement * 24, intensity);
       this.audio.updateLetter(letter, this.getLetterProgress(letter));
-      letter.audioPose.position.copy(letter.mesh.position);
+      if (this.activeTool === 'move') {
+        const goal = GOAL_POSITIONS[letter.id];
+        this.audio.updateMoveAudio(Math.hypot(letter.group.position.x - goal.x, letter.group.position.y - goal.y));
+      } else if (this.activeTool === 'scale') {
+        this.audio.updateScaleAudio(letter.scale - TARGET_SCALE);
+      } else if (this.activeTool === 'rotate') {
+        const rotationError = Math.hypot(
+          angleDelta(letter.mesh.rotation.x, GOAL_ROTATION.x),
+          angleDelta(letter.mesh.rotation.y, GOAL_ROTATION.y),
+          angleDelta(letter.mesh.rotation.z, GOAL_ROTATION.z),
+        );
+        this.audio.triggerRotateAudio(rotationError, letter.id);
+      }
+      letter.audioPose.position.copy(letter.group.position);
       letter.audioPose.rotation.set(letter.mesh.rotation.x, letter.mesh.rotation.y, letter.mesh.rotation.z);
       letter.audioPose.scale.copy(letter.mesh.scale);
     }
@@ -603,31 +871,13 @@ class ABDApp {
 
     for (const id of LETTER_SEQUENCE) {
       const object = await this.loader.loadAsync(letterAssets[id]);
+      const initialColor = PALETTE[Math.floor(Math.random() * PALETTE.length)];
+      object.updateMatrixWorld(true);
+      const bounds = new THREE.Box3().setFromObject(object);
       object.traverse((child) => {
         if (!(child.isMesh && child.material)) return;
-        const sourceMaterial = Array.isArray(child.material) ? child.material[0] : child.material;
-        const baseMap = sourceMaterial?.map || null;
 
-        const material = new THREE.MeshPhysicalMaterial({
-          map: baseMap,
-          color: new THREE.Color('#ffffff'),
-          roughness: 0.36,
-          roughnessMap: this.clayGrain,
-          bumpMap: this.clayGrain,
-          bumpScale: 0.035,
-          metalness: 0,
-          clearcoat: 0.56,
-          clearcoatRoughness: 0.24,
-          transmission: 0.015,
-          thickness: 0.28,
-          reflectivity: 0.52,
-          envMapIntensity: 0.72,
-          alphaMap: this.ditherMap,
-          alphaTest: 0.5,
-          transparent: false,
-          opacity: 0.82,
-        });
-
+        const material = this.createBalloonMaterial(initialColor);
         child.castShadow = true;
         child.receiveShadow = true;
         child.material = material;
@@ -635,34 +885,37 @@ class ABDApp {
 
       const initialScale = START_SCALES[id];
       const initialPosition = START_POSITIONS[id];
-      const initialColor = PALETTE[Math.floor(Math.random() * PALETTE.length)];
-      object.updateMatrixWorld(true);
-      const bounds = new THREE.Box3().setFromObject(object);
       const modelSize = bounds.getSize(new THREE.Vector3());
       const modelCenter = bounds.getCenter(new THREE.Vector3());
       const baseModelScale = 1.65 / Math.max(modelSize.x, modelSize.y, modelSize.z);
-      object.position.sub(modelCenter);
+      object.position.set(-modelCenter.x, -bounds.min.y, -modelCenter.z);
       object.scale.z = 1.2;
 
       const letterGroup = new THREE.Group();
-      letterGroup.add(object);
-      letterGroup.scale.setScalar(baseModelScale * initialScale);
-      letterGroup.rotation.set(0, -Math.PI * 0.15, (Math.random() - 0.5) * 0.8);
+      const visualGroup = new THREE.Group();
+      visualGroup.add(object);
+      visualGroup.scale.setScalar(baseModelScale * initialScale);
+      visualGroup.rotation.set(0, -Math.PI * 0.15, (Math.random() - 0.5) * 0.8);
+      letterGroup.add(visualGroup);
       letterGroup.position.set(initialPosition.x, initialPosition.y, 0);
 
       const letter = {
         id,
-        mesh: letterGroup,
+        group: letterGroup,
+        mesh: visualGroup,
         targetColor: new THREE.Color(initialColor),
         baseModelScale,
+        modelSize,
         restScale: initialScale,
         wobbleSeed: Math.random() * Math.PI * 2,
         jellyAt: -10,
         jellyStrength: 0,
-        spinVelocity: 0,
         isDragging: false,
         isPressed: false,
+        isInteracting: false,
+        isManualTransform: false,
         scaleTweenActive: false,
+        correctParameters: new Set(),
         lastDragPoint: new THREE.Vector3(),
         dragOffset: new THREE.Vector3(),
         targetScale: new THREE.Vector3(initialScale, initialScale, initialScale),
@@ -676,12 +929,14 @@ class ABDApp {
 
       this.letters.push(letter);
       letter.audioPose = {
-        position: letter.mesh.position.clone(),
+        position: letter.group.position.clone(),
         rotation: new THREE.Vector3(letter.mesh.rotation.x, letter.mesh.rotation.y, letter.mesh.rotation.z),
         scale: letter.mesh.scale.clone(),
       };
       this.scene.add(letterGroup);
     }
+
+    this.scrambleLetters();
 
     await Promise.all([this.audio.loadLetterEffects(), this.audio.loadFinalTrack()]);
     this.bindCanvasInteraction();
@@ -701,10 +956,87 @@ class ABDApp {
     return point;
   }
 
+  scrambleLetters() {
+    if (!this.letters?.length) return;
+    const spawnScales = [0.6, 1.7, THREE.MathUtils.randFloat(0.85, 1.25)];
+    for (let index = spawnScales.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(Math.random() * (index + 1));
+      [spawnScales[index], spawnScales[swapIndex]] = [spawnScales[swapIndex], spawnScales[index]];
+    }
+
+    const cameraDistance = Math.abs(this.camera.position.z);
+    const frustumHalfHeight = Math.tan(THREE.MathUtils.degToRad(this.camera.fov * 0.5)) * cameraDistance;
+    const frustumHalfWidth = frustumHalfHeight * this.camera.aspect;
+    const edgePadding = 0.4;
+
+    this.letters.forEach((letter, index) => {
+      gsap.killTweensOf(letter.group.position);
+      gsap.killTweensOf(letter.mesh.scale);
+      const randomX = THREE.MathUtils.randFloat(-Math.PI, Math.PI);
+      const randomY = THREE.MathUtils.randFloat(-Math.PI, Math.PI);
+      const randomZ = THREE.MathUtils.randFloat(-Math.PI, Math.PI);
+      let scale = spawnScales[index];
+
+      letter.group.position.set(0, 0, 0);
+      letter.group.rotation.set(0, 0, 0);
+      letter.mesh.rotation.set(randomX, randomY, randomZ);
+      letter.mesh.scale.setScalar(letter.baseModelScale * scale);
+      letter.group.updateMatrixWorld(true);
+      let visualBounds = new THREE.Box3().setFromObject(letter.mesh);
+      const availableWidth = Math.max(0.1, frustumHalfWidth * 2 - edgePadding * 2);
+      const availableHeight = Math.max(0.1, frustumHalfHeight * 2 - edgePadding * 2);
+      const fitRatio = Math.min(
+        1,
+        availableWidth / Math.max(visualBounds.max.x - visualBounds.min.x, 0.0001),
+        availableHeight / Math.max(visualBounds.max.y - visualBounds.min.y, 0.0001),
+      );
+      scale = THREE.MathUtils.clamp(scale * fitRatio, 0.55, 1.7);
+      letter.mesh.scale.setScalar(letter.baseModelScale * scale);
+      letter.group.updateMatrixWorld(true);
+      visualBounds = new THREE.Box3().setFromObject(letter.mesh);
+
+      const nearestDistance = Math.max(this.camera.near + 0.1, this.camera.position.z - visualBounds.max.z);
+      const halfHeight = Math.tan(THREE.MathUtils.degToRad(this.camera.fov * 0.5)) * nearestDistance;
+      const halfWidth = halfHeight * this.camera.aspect;
+      const minX = -halfWidth + edgePadding - visualBounds.min.x;
+      const maxX = halfWidth - edgePadding - visualBounds.max.x;
+      const minY = -halfHeight + edgePadding - visualBounds.min.y;
+      const maxY = halfHeight - edgePadding - visualBounds.max.y;
+      const randX = THREE.MathUtils.clamp(THREE.MathUtils.randFloat(-halfWidth, halfWidth), minX, maxX);
+      const randY = THREE.MathUtils.clamp(THREE.MathUtils.randFloat(-halfHeight, halfHeight), minY, maxY);
+
+      letter.group.position.set(randX, randY, 0);
+      letter.x = randX;
+      letter.y = randY;
+      letter.scale = scale;
+      letter.restScale = scale;
+      letter.targetScale.setScalar(scale);
+      letter.isDragging = false;
+      letter.isPressed = false;
+      letter.isInteracting = false;
+      letter.isManualTransform = false;
+      letter.solved = false;
+      letter.correctParameters.clear();
+      letter.jellyStrength = 0;
+      letter.jellyAt = -10;
+      this.applyColorToLetter(letter, letter.color || PALETTE[Math.floor(Math.random() * PALETTE.length)]);
+    });
+  }
+
   bindUI() {
     window.addEventListener('resize', () => this.resize());
     const helpButton = document.getElementById('helpMenuButton');
     const helpDropdown = document.getElementById('helpDropdown');
+    const imageButton = document.getElementById('imageMenuButton');
+    const imageDropdown = document.getElementById('imageMenuDropdown');
+    const pistaModal = document.getElementById('pistaModal');
+    const closePista = () => {
+      if (pistaModal) pistaModal.hidden = true;
+    };
+    const closeImageMenu = () => {
+      imageDropdown.hidden = true;
+      imageButton.setAttribute('aria-expanded', 'false');
+    };
     const closeHelp = () => {
       helpDropdown.hidden = true;
       helpButton.setAttribute('aria-expanded', 'false');
@@ -712,15 +1044,36 @@ class ABDApp {
 
     helpButton.addEventListener('click', (event) => {
       event.stopPropagation();
+      closeImageMenu();
       helpDropdown.hidden = !helpDropdown.hidden;
       helpButton.setAttribute('aria-expanded', String(!helpDropdown.hidden));
     });
     helpDropdown.addEventListener('pointerdown', (event) => event.stopPropagation());
+    imageButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      closeHelp();
+      imageDropdown.hidden = !imageDropdown.hidden;
+      imageButton.setAttribute('aria-expanded', String(!imageDropdown.hidden));
+    });
+    imageDropdown.addEventListener('pointerdown', (event) => event.stopPropagation());
+    document.getElementById('openPistaButton').addEventListener('click', () => {
+      closeImageMenu();
+      if (pistaModal) pistaModal.hidden = false;
+    });
+    document.getElementById('closePistaModal').addEventListener('click', closePista);
+    pistaModal.addEventListener('click', (event) => {
+      if (event.target === pistaModal) closePista();
+    });
     document.addEventListener('pointerdown', (event) => {
       if (!helpDropdown.hidden && !helpDropdown.contains(event.target) && !helpButton.contains(event.target)) closeHelp();
+      if (!imageDropdown.hidden && !imageDropdown.contains(event.target) && !imageButton.contains(event.target)) closeImageMenu();
     });
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') closeHelp();
+      if (event.key === 'Escape') {
+        closeHelp();
+        closeImageMenu();
+        closePista();
+      }
     });
     document.getElementById('autoSolveButton').addEventListener('click', () => {
       closeHelp();
@@ -741,7 +1094,7 @@ class ABDApp {
           this.statusText.textContent = 'Toca una letra para usar el gizmo';
           return;
         }
-        this.transformControls.attach(this.selectedLetter.mesh);
+        this.transformControls.attach(this.getTransformTarget(this.selectedLetter));
         this.transformControls.setMode(tool === 'move' ? 'translate' : tool);
         this.statusText.textContent = `${this.selectedLetter.id} · ${tool === 'scale' ? 'escalar' : tool === 'rotate' ? 'rotar' : 'mover'}`;
       });
@@ -774,10 +1127,10 @@ class ABDApp {
           pointerId: event.pointerId,
           startX: event.clientX,
           startY: event.clientY,
-          dragOffset: hit.mesh.position.clone().sub(pointerWorld),
+          dragOffset: hit.group.position.clone().sub(pointerWorld),
         };
       } else {
-        this.transformControls.attach(hit.mesh);
+        this.transformControls.attach(this.getTransformTarget(hit));
         this.transformControls.setMode(this.activeTool === 'move' ? 'translate' : this.activeTool);
       }
     });
@@ -792,8 +1145,11 @@ class ABDApp {
         this.draggedLetter.dragOffset.copy(candidate.dragOffset);
         this.draggedLetter.isPressed = false;
         this.draggedLetter.isDragging = true;
-        this.draggedLetter.lastDragPoint.copy(this.draggedLetter.mesh.position);
+        this.draggedLetter.isInteracting = true;
+        this.draggedLetter.isManualTransform = false;
+        this.draggedLetter.lastDragPoint.copy(this.draggedLetter.group.position);
         this.canvas.setPointerCapture(candidate.pointerId);
+        this.audio.startMoveAudio(this.draggedLetter.id);
         this.audio.startDrag(this.draggedLetter);
       }
       if (!this.draggedLetter || this.transformControls.dragging) return;
@@ -815,10 +1171,12 @@ class ABDApp {
       const stretch = Math.min(speed * 0.22, 0.7);
       const squash = Math.min(speed * 0.1, 0.28);
 
-      this.draggedLetter.mesh.position.set(next.x, next.y, 0);
+      this.draggedLetter.group.position.set(next.x, next.y, 0);
       this.draggedLetter.lastDragPoint.copy(next);
       this.draggedLetter.x = next.x;
       this.draggedLetter.y = next.y;
+      const moveGoal = GOAL_POSITIONS[this.draggedLetter.id];
+      this.audio.updateMoveAudio(Math.hypot(next.x - moveGoal.x, next.y - moveGoal.y));
       const scaleX = this.draggedLetter.restScale * (1 + stretch * directionX ** 2 - squash * directionY ** 2);
       const scaleY = this.draggedLetter.restScale * (1 + stretch * directionY ** 2 - squash * directionX ** 2);
       this.draggedLetter.targetScale.set(scaleX, scaleY, this.draggedLetter.restScale);
@@ -833,8 +1191,10 @@ class ABDApp {
         const letter = this.draggedLetter;
         letter.isDragging = false;
         letter.isPressed = false;
+        letter.isInteracting = false;
         letter.targetScale.setScalar(letter.restScale);
         this.audio.stopDrag(letter);
+        this.audio.stopMoveAudio();
         this.audio.playDrop();
         this.playJellyBounce(letter, 0.22);
         this.draggedLetter = null;
@@ -876,13 +1236,13 @@ class ABDApp {
     letter.mesh.traverse((child) => {
       if (child.isMesh && child.material) {
         child.material.color.copy(visualColor);
-        child.material.emissive = new THREE.Color(color).multiplyScalar(0.012);
-        child.material.emissiveIntensity = 0.1;
+        child.material.emissive = new THREE.Color(color).multiplyScalar(0.18);
+        child.material.emissiveIntensity = 0.42;
       }
     });
     if (playSound) {
       this.audio.resume().then(() => this.audio.playSparkle()).catch(() => {});
-      this.playJellyBounce(letter, 0.11);
+      this.playJellyBounce(letter, 0.11, 0.24);
     }
   }
 
@@ -892,39 +1252,51 @@ class ABDApp {
     visualColor.getHSL(hsl);
     visualColor.setHSL(
       hsl.h,
-      THREE.MathUtils.clamp(hsl.s * 1.32, 0, 1),
-      THREE.MathUtils.clamp(hsl.l * 0.78, 0.24, 0.58),
+      THREE.MathUtils.clamp(hsl.s, 0.92, 1),
+      THREE.MathUtils.clamp(hsl.l, 0.42, 0.55),
     );
     return visualColor;
   }
 
-  playJellyBounce(letter, amount = 0.14) {
-    if (!letter?.mesh) return;
+  playJellyBounce(letter, amount = 0.14, driftX = 0.14) {
+    if (!letter?.mesh || letter.isManualTransform) return;
     const baseScale = letter.baseModelScale * letter.restScale;
+    const baseX = letter.group.position.x;
     gsap.killTweensOf(letter.mesh.scale);
+    gsap.killTweensOf(letter.group.position);
     letter.scaleTweenActive = true;
+    letter.scaleVelocity.set(0, 0, 0);
     letter.mesh.scale.setScalar(baseScale);
 
     gsap.timeline({
       onComplete: () => {
+        letter.group.position.x = baseX;
         letter.mesh.scale.setScalar(baseScale);
         letter.targetScale.setScalar(letter.restScale);
         letter.scale = letter.restScale;
         letter.scaleTweenActive = false;
       },
-    }).to(letter.mesh.scale, {
+    }).to(letter.group.position, {
+      x: baseX + driftX,
+      duration: 0.12,
+      ease: 'power2.out',
+    }, 0).to(letter.mesh.scale, {
       x: baseScale * (1 + amount),
       y: baseScale * (1 - amount * 0.72),
       z: baseScale * (1 + amount * 0.12),
       duration: 0.12,
       ease: 'power2.out',
-    }).to(letter.mesh.scale, {
+    }, 0).to(letter.group.position, {
+      x: baseX,
+      duration: 0.55,
+      ease: 'power3.out',
+    }, 0.08).to(letter.mesh.scale, {
       x: baseScale,
       y: baseScale,
       z: baseScale,
       duration: 0.62,
       ease: 'elastic.out(1, 0.34)',
-    });
+    }, 0.08);
   }
 
   autoSolvePuzzle() {
@@ -936,6 +1308,13 @@ class ABDApp {
     this.pressCandidate = null;
     this.pressedLetter = null;
     this.draggedLetter = null;
+    this.selectedLetter = null;
+    this.letters.forEach((letter) => {
+      letter.isInteracting = false;
+      letter.isManualTransform = false;
+      letter.scaleTweenActive = true;
+      letter.scaleVelocity.set(0, 0, 0);
+    });
     this.statusText.textContent = 'Solucionador mágico…';
     const solveButton = document.getElementById('autoSolveButton');
     solveButton.disabled = true;
@@ -944,29 +1323,30 @@ class ABDApp {
       onComplete: () => {
         for (const letter of this.letters) {
           const target = GOAL_POSITIONS[letter.id];
-          letter.mesh.position.set(target.x, target.y, 0);
-          letter.mesh.rotation.set(0, -Math.PI * 0.15, 0);
-          letter.mesh.scale.setScalar(letter.baseModelScale);
+          const targetScale = LETTER_TARGET_SCALES[letter.id];
+          letter.group.position.set(target.x, target.y, 0);
+          letter.mesh.rotation.set(GOAL_ROTATION.x, GOAL_ROTATION.y, GOAL_ROTATION.z);
+          letter.mesh.scale.setScalar(letter.baseModelScale * targetScale);
           letter.x = target.x;
           letter.y = target.y;
-          letter.scale = 1;
-          letter.restScale = 1;
-          letter.targetScale.setScalar(1);
+          letter.scale = targetScale;
+          letter.restScale = targetScale;
+          letter.targetScale.setScalar(targetScale);
           letter.scaleVelocity.set(0, 0, 0);
           letter.color = this.goalColor;
           letter.targetColor.copy(this.getDisplayColor(this.goalColor));
           letter.isPressed = false;
           letter.isDragging = false;
+          letter.isInteracting = false;
           letter.scaleTweenActive = false;
           letter.solved = true;
           this.applyColorToLetter(letter, this.goalColor);
         }
 
-        this.state = 'playing';
-        this.canvas.style.pointerEvents = 'auto';
+        this.autoSolveTimeline = null;
         solveButton.disabled = false;
         this.statusText.textContent = 'Composición lista';
-        this.checkWinCondition();
+        this.beginVictoryCycle();
       },
     });
     this.autoSolveTimeline = timeline;
@@ -974,49 +1354,115 @@ class ABDApp {
     LETTER_SEQUENCE.forEach((id, index) => {
       const letter = this.letters.find((item) => item.id === id);
       const goal = GOAL_POSITIONS[id];
-      const startAt = index * 0.3;
+      const startAt = index * 0.28;
       const targetColor = this.getDisplayColor(this.goalColor);
       const colorStart = letter.targetColor.clone();
       const colorBlend = { progress: 0 };
-      const scale = letter.baseModelScale;
+      const baseScale = letter.baseModelScale * LETTER_TARGET_SCALES[id];
+      const baseX = letter.group.position.x;
 
-      timeline.to(letter.mesh.position, {
+      timeline.to(letter.group.position, {
+        x: goal.x + 0.34 + index * 0.18,
+        y: goal.y + 0.28,
+        z: 0,
+        duration: 0.52,
+        ease: 'power2.out',
+      }, startAt);
+      timeline.to(letter.mesh.scale, {
+        x: baseScale * 1.7,
+        y: baseScale * 0.66,
+        z: baseScale * 1.3,
+        duration: 0.18,
+        ease: 'power2.out',
+      }, startAt + 0.04).to(letter.mesh.scale, {
+        x: baseScale,
+        y: baseScale,
+        z: baseScale,
+        duration: 0.34,
+        ease: 'elastic.out(1, 0.35)',
+      }, startAt + 0.18);
+      timeline.to(letter.group.position, {
         x: goal.x,
         y: goal.y,
         z: 0,
-        duration: 0.95,
+        duration: 0.7,
         ease: 'power3.inOut',
-      }, startAt);
+      }, startAt + 0.22);
       timeline.to(letter.mesh.rotation, {
-        x: 0,
-        y: -Math.PI * 0.15,
-        z: 0,
-        duration: 0.85,
+        x: GOAL_ROTATION.x,
+        y: GOAL_ROTATION.y,
+        z: GOAL_ROTATION.z,
+        duration: 0.65,
         ease: 'power2.inOut',
-      }, startAt);
-      timeline.to(letter.mesh.scale, {
-        x: scale,
-        y: scale,
-        z: scale,
-        duration: 0.9,
-        ease: 'back.out(1.25)',
-      }, startAt);
+      }, startAt + 0.12);
       timeline.to(colorBlend, {
         progress: 1,
-        duration: 0.85,
+        duration: 0.9,
         ease: 'sine.inOut',
-        onUpdate: () => letter.targetColor.copy(colorStart).lerp(targetColor, colorBlend.progress),
-      }, startAt);
+        onUpdate: () => {
+          letter.targetColor.copy(colorStart).lerp(targetColor, colorBlend.progress);
+          letter.mesh.traverse((child) => {
+            if (child.isMesh && child.material) {
+              child.material.color.copy(letter.targetColor);
+              child.material.emissive = new THREE.Color(this.goalColor).multiplyScalar(0.04);
+            }
+          });
+        },
+      }, startAt + 0.1);
+      timeline.to(letter.group.position, {
+        x: baseX + 0.16,
+        duration: 0.08,
+        ease: 'power1.out',
+      }, startAt + 0.32).to(letter.group.position, {
+        x: goal.x,
+        duration: 0.25,
+        ease: 'power2.inOut',
+      }, startAt + 0.38);
     });
   }
 
   getLetterProgress(letter) {
+    const { positionFit, scaleFit, rotationFit, colorFit } = this.getLetterMetrics(letter);
+    return positionFit * 0.38 + scaleFit * 0.22 + rotationFit * 0.2 + colorFit * 0.2;
+  }
+
+  getLetterMetrics(letter) {
     const goal = GOAL_POSITIONS[letter.id];
-    const positionError = Math.hypot(letter.x - goal.x, letter.y - goal.y);
-    const positionFit = 1 - THREE.MathUtils.clamp(positionError / 4.5, 0, 1);
-    const scaleFit = 1 - THREE.MathUtils.clamp(Math.abs(letter.scale - 1) / 0.55, 0, 1);
-    const colorFit = 1 - THREE.MathUtils.clamp(colorDistance(letter.color, this.goalColor) / 360, 0, 1);
-    return positionFit * 0.5 + scaleFit * 0.28 + colorFit * 0.22;
+    const positionError = Math.hypot(letter.group.position.x - goal.x, letter.group.position.y - goal.y);
+    const rotationError = Math.hypot(
+      Math.atan2(Math.sin(letter.mesh.rotation.x - GOAL_ROTATION.x), Math.cos(letter.mesh.rotation.x - GOAL_ROTATION.x)),
+      Math.atan2(Math.sin(letter.mesh.rotation.y - GOAL_ROTATION.y), Math.cos(letter.mesh.rotation.y - GOAL_ROTATION.y)),
+      Math.atan2(Math.sin(letter.mesh.rotation.z - GOAL_ROTATION.z), Math.cos(letter.mesh.rotation.z - GOAL_ROTATION.z)),
+    );
+    const fitWithinTolerance = (error, tolerance, range) => 1 - THREE.MathUtils.clamp((error - tolerance) / (range - tolerance), 0, 1);
+
+    return {
+      positionFit: fitWithinTolerance(positionError, 0.8, 5.5),
+      scaleFit: fitWithinTolerance(
+        Math.abs(letter.scale - LETTER_TARGET_SCALES[letter.id]),
+        0.18,
+        LETTER_TARGET_SCALES[letter.id] * 0.8,
+      ),
+      rotationFit: fitWithinTolerance(rotationError, 0.22, Math.PI),
+      colorFit: fitWithinTolerance(colorDistance(letter.color, this.goalColor), 60, 441.7),
+    };
+  }
+
+  updateTargetFeedback(letter) {
+    const metrics = this.getLetterMetrics(letter);
+    const checks = [
+      ['position', metrics.positionFit],
+      ['scale', metrics.scaleFit],
+      ['color', metrics.colorFit],
+    ];
+    checks.forEach(([parameter, fit]) => {
+      if (fit >= 0.999 && !letter.correctParameters.has(parameter)) {
+        letter.correctParameters.add(parameter);
+        this.audio.playParameterCheck(parameter);
+      } else if (fit < 0.96) {
+        letter.correctParameters.delete(parameter);
+      }
+    });
   }
 
   resize() {
@@ -1040,37 +1486,78 @@ class ABDApp {
   }
 
   beginVictoryCycle() {
-    if (this.state === 'celebrating') return;
+    if (this.state === 'celebrating' || this.victoryTimeline) return;
     this.state = 'celebrating';
     this.canvas.style.pointerEvents = 'none';
-
-    const timeline = gsap.timeline({
-      defaults: { ease: 'elastic.out(1, 0.45)', duration: 0.8 },
-      onComplete: () => {
-        this.audio.startFinalSong();
-        this.scheduleReset();
-      },
+    const songDuration = this.audio.trackBuffer?.duration ?? 10;
+    const bounceDuration = 0.52;
+    const bounceSpacing = 0.68;
+    const bounceCount = Math.max(
+      VICTORY_BOUNCE_ORDER.length,
+      Math.floor((songDuration - bounceDuration) / bounceSpacing) + 1,
+    );
+    this.letters.forEach((letter) => {
+      const home = GOAL_POSITIONS[letter.id];
+      letter.group.position.set(home.x, home.y, 0);
+      letter.group.rotation.set(0, 0, 0);
+      letter.mesh.position.set(0, 0, 0);
+      letter.mesh.rotation.set(GOAL_ROTATION.x, GOAL_ROTATION.y, 0);
     });
 
-    LETTER_SEQUENCE.forEach((id, index) => {
+    const timeline = gsap.timeline({
+      defaults: { ease: 'elastic.out(1, 0.42)' },
+      onComplete: () => {
+        this.victoryTimeline = null;
+        this.letters.forEach((letter) => {
+          const home = GOAL_POSITIONS[letter.id];
+          const targetScale = LETTER_TARGET_SCALES[letter.id];
+          letter.group.position.set(home.x, home.y, 0);
+          letter.mesh.scale.setScalar(letter.baseModelScale * targetScale);
+          letter.scale = targetScale;
+          letter.restScale = targetScale;
+          letter.targetScale.setScalar(targetScale);
+          letter.scaleTweenActive = false;
+        });
+      },
+    });
+    this.victoryTimeline = timeline;
+    timeline.to({}, { duration: songDuration }, 0);
+    this.audio.resume().then(() => this.audio.startFinalSong()).catch(() => {});
+    this.scheduleReset();
+
+    for (let step = 0; step < bounceCount; step += 1) {
+      const id = VICTORY_BOUNCE_ORDER[step % VICTORY_BOUNCE_ORDER.length];
       const letter = this.letters.find((item) => item.id === id);
       if (!letter) return;
+      letter.scaleTweenActive = true;
       const home = GOAL_POSITIONS[id];
-      const offset = index === 0 ? 0 : index * 0.18;
-      timeline.to(letter.mesh.position, {
-        x: home.x,
-        y: home.y + 2.2,
-        z: 0,
-        duration: 0.42,
+      const offset = step * bounceSpacing;
+      const baseScale = letter.baseModelScale * LETTER_TARGET_SCALES[id];
+      timeline.to(letter.mesh.scale, {
+        x: baseScale * 1.16,
+        y: baseScale * 0.84,
+        z: baseScale * 1.04,
+        duration: 0.16,
         ease: 'power2.out',
-      }, offset).to(letter.mesh.position, {
+      }, offset).to(letter.mesh.scale, {
+        x: baseScale,
+        y: baseScale,
+        z: baseScale,
+        duration: bounceDuration - 0.16,
+        ease: 'elastic.out(1, 0.36)',
+      }, offset + 0.16);
+      timeline.to(letter.group.position, {
+        y: home.y + 0.46,
+        duration: 0.16,
+        ease: 'power2.out',
+      }, offset).to(letter.group.position, {
         x: home.x,
         y: home.y,
         z: 0,
-        duration: 0.6,
-        ease: 'elastic.out(1, 0.4)',
-      }, `>-${0.08}`);
-    });
+        duration: bounceDuration - 0.16,
+        ease: 'elastic.out(1, 0.42)',
+      }, offset + 0.13);
+    }
 
   }
 
@@ -1084,23 +1571,10 @@ class ABDApp {
   resetChaos() {
     this.state = 'playing';
     this.canvas.style.pointerEvents = 'auto';
-
-    for (const letter of this.letters) {
-      const { x, y } = this.randomBoardPosition(letter.id);
-      letter.mesh.position.set(x, y, 0);
-      letter.mesh.rotation.set(0, -Math.PI * 0.15, (Math.random() - 0.5) * 0.8);
-      letter.restScale = 0.62 + Math.random() * 0.3;
-      letter.mesh.scale.setScalar(letter.baseModelScale * letter.restScale);
-      letter.x = x;
-      letter.y = y;
-      letter.scale = letter.restScale;
-      letter.targetScale.setScalar(letter.restScale);
-      letter.isDragging = false;
-      letter.solved = false;
-      letter.color = PALETTE[Math.floor(Math.random() * PALETTE.length)];
-      this.applyColorToLetter(letter, letter.color);
-    }
-
+    this.audio.stopMoveAudio();
+    this.audio.stopScaleAudio();
+    this.letters.forEach((letter) => this.audio.stopRotateAudio(letter.id));
+    this.scrambleLetters();
     this.goalColor = resolveNextGoalColor(PALETTE);
     this.statusText.textContent = 'Nueva ronda';
   }
@@ -1115,6 +1589,7 @@ class ABDApp {
         y: letter.y,
         scale: letter.scale,
         color: letter.color,
+        rotation: letter.mesh.rotation,
       })),
       objective: { color: this.goalColor },
       positions: {
@@ -1122,7 +1597,9 @@ class ABDApp {
         B: GOAL_POSITIONS.B,
         D: GOAL_POSITIONS.D,
       },
-      targetScale: 1,
+      rotations: { A: GOAL_ROTATION, B: GOAL_ROTATION, D: GOAL_ROTATION },
+      targetScale: TARGET_SCALE,
+      targetScales: LETTER_TARGET_SCALES,
       tolerance: 0.8,
     });
 
@@ -1134,61 +1611,19 @@ class ABDApp {
   animate(now) {
     const elapsed = now * 0.001;
     this.stickerManager?.update(elapsed);
-
-    if (this.confetti) {
-      const positions = this.confetti.geometry.attributes.position;
-      const { basePositions, phases, velocities } = this.confetti.userData;
-      const delta = this.particleLastTime
-        ? THREE.MathUtils.clamp((now - this.particleLastTime) / 1000, 0.001, 0.04)
-        : 1 / 60;
-      this.particleLastTime = now;
-      const repulsionRadius = 2.25;
-      const springStrength = 3.1;
-      const damping = Math.exp(-2.8 * delta);
-
-      for (let index = 0; index < phases.length; index += 1) {
-        const offset = index * 3;
-        const x = positions.array[offset];
-        const y = positions.array[offset + 1];
-        const baseX = basePositions[offset];
-        const baseY = basePositions[offset + 1];
-        let forceX = 0;
-        let forceY = 0;
-
-        if (this.particlePointerActive) {
-          const dx = x - this.particlePointer.x;
-          const dy = y - this.particlePointer.y;
-          const distanceSquared = dx * dx + dy * dy;
-          const gaussian = Math.exp(-distanceSquared / (2 * repulsionRadius * repulsionRadius));
-          const distance = Math.sqrt(Math.max(distanceSquared, 0.0001));
-          const safeDx = distanceSquared < 0.0001 ? Math.cos(phases[index]) : dx / distance;
-          const safeDy = distanceSquared < 0.0001 ? Math.sin(phases[index]) : dy / distance;
-          forceX = safeDx * gaussian * 42;
-          forceY = safeDy * gaussian * 42;
-        }
-
-        const noiseX = Math.sin(elapsed * 0.58 + phases[index] + baseY * 0.42) * 0.75
-          + Math.sin(elapsed * 0.31 + baseX * 0.35) * 0.38;
-        const noiseY = Math.cos(elapsed * 0.52 + phases[index] + baseX * 0.4) * 0.7
-          + Math.cos(elapsed * 0.28 + baseY * 0.32) * 0.34;
-
-        velocities[offset] += ((baseX - x) * springStrength + forceX + noiseX) * delta;
-        velocities[offset + 1] += ((baseY - y) * springStrength + forceY + noiseY) * delta;
-        velocities[offset] *= damping;
-        velocities[offset + 1] *= damping;
-        positions.array[offset] = x + velocities[offset] * delta;
-        positions.array[offset + 1] = y + velocities[offset + 1] * delta;
-      }
-      positions.needsUpdate = true;
-    }
-    this.doodleObjects?.forEach((doodle) => {
-      doodle.position.y = doodle.userData.baseY + Math.sin(elapsed * 0.8 + doodle.userData.phase) * 0.08;
-      doodle.rotation.z += doodle.userData.spin;
+    this.glitterLights?.forEach((light, index) => {
+      const phase = index * Math.PI * 2 / this.glitterLights.length;
+      light.position.set(
+        Math.cos(elapsed * 0.22 + phase) * 5.2,
+        1 + Math.sin(elapsed * 0.31 + phase) * 2.8,
+        3.5 + Math.sin(elapsed * 0.27 + phase) * 1.3,
+      );
     });
 
     this.letters.forEach((letter, index) => {
       const progress = this.getLetterProgress(letter);
       this.audio.updateLetter(letter, progress);
+      if (this.state === 'playing') this.updateTargetFeedback(letter);
       if (progress >= 0.985 && !letter.solved) {
         letter.solved = true;
         this.audio.playProgressDing();
@@ -1198,15 +1633,14 @@ class ABDApp {
 
       const goal = GOAL_POSITIONS[letter.id];
       const positionError = Math.hypot(letter.x - goal.x, letter.y - goal.y);
-      const scaleError = Math.abs(letter.scale - 1);
+      const scaleError = Math.abs(letter.scale - TARGET_SCALE);
       const rotationError = Math.abs(Math.atan2(Math.sin(letter.mesh.rotation.z), Math.cos(letter.mesh.rotation.z)));
       const poseError = positionError + scaleError * 1.6 + rotationError * 0.65;
       const approach = THREE.MathUtils.smoothstep(poseError, 5.2, 0.18);
       const ditherOpacity = 0.82 + approach * 0.18;
 
-      if (!letter.isDragging && this.state === 'playing') {
-        letter.x = letter.mesh.position.x;
-        letter.y = letter.mesh.position.y;
+      if (!letter.isInteracting && !letter.scaleTweenActive && this.state === 'playing') {
+        letter.group.position.y = letter.y + Math.sin(elapsed * 1.7 + letter.wobbleSeed) * 0.04;
         const age = elapsed - letter.jellyAt;
         const bounce = age >= 0 ? letter.jellyStrength * Math.exp(-age * 6.5) * Math.sin(age * 18) : 0;
         const breathing = Math.sin(elapsed * 1.7 + letter.wobbleSeed) * 0.012;
@@ -1215,17 +1649,19 @@ class ABDApp {
           letter.restScale * (1 - breathing * 0.5 - bounce * 0.58),
           letter.restScale,
         );
-        letter.mesh.rotation.z += letter.spinVelocity;
-        letter.spinVelocity *= 0.94;
       }
 
       if (this.state === 'celebrating') {
-        const hue = (elapsed * 0.25 + index * 0.2) % 1;
-        const rainbow = new THREE.Color().setHSL(hue, 0.85, 0.58);
+        const paletteIndex = Math.floor(elapsed * 1.25 + index * 3) % PAINT_COLORS.length;
+        const victoryColor = new THREE.Color(PAINT_COLORS[paletteIndex]);
+        const hsl = {};
+        victoryColor.getHSL(hsl);
+        victoryColor.setHSL(hsl.h, Math.max(hsl.s, 0.96), THREE.MathUtils.clamp(hsl.l, 0.42, 0.52));
         letter.mesh.traverse((child) => {
           if (child.isMesh && child.material) {
-            child.material.color.copy(rainbow);
-            child.material.emissive.copy(rainbow).multiplyScalar(0.45);
+            child.material.color.copy(victoryColor);
+            child.material.emissive.copy(victoryColor).multiplyScalar(0.12);
+            child.material.emissiveIntensity = 0.3;
           }
         });
       } else {
@@ -1234,19 +1670,21 @@ class ABDApp {
             child.material.opacity = ditherOpacity;
             const targetColor = new THREE.Color(letter.targetColor);
             child.material.color.lerp(targetColor, 0.12);
-            child.material.emissive = new THREE.Color(letter.targetColor).multiplyScalar(0.12);
-            child.material.emissiveIntensity = 0.1;
+            child.material.emissive = new THREE.Color(letter.targetColor).multiplyScalar(0.24);
+            child.material.emissiveIntensity = 0.35;
           }
         });
       }
 
-      letter.scaleVelocity.x += (letter.targetScale.x - letter.mesh.scale.x / letter.baseModelScale) * 0.18;
-      letter.scaleVelocity.y += (letter.targetScale.y - letter.mesh.scale.y / letter.baseModelScale) * 0.18;
-      letter.scaleVelocity.z += (letter.targetScale.z - letter.mesh.scale.z / letter.baseModelScale) * 0.18;
-      letter.scaleVelocity.multiplyScalar(0.72);
-      letter.mesh.scale.x = Math.max(0.001, letter.mesh.scale.x + letter.scaleVelocity.x * letter.baseModelScale);
-      letter.mesh.scale.y = Math.max(0.001, letter.mesh.scale.y + letter.scaleVelocity.y * letter.baseModelScale);
-      letter.mesh.scale.z = Math.max(0.001, letter.mesh.scale.z + letter.scaleVelocity.z * letter.baseModelScale);
+      if (!letter.isManualTransform && !letter.scaleTweenActive) {
+        letter.scaleVelocity.x += (letter.targetScale.x - letter.mesh.scale.x / letter.baseModelScale) * 0.18;
+        letter.scaleVelocity.y += (letter.targetScale.y - letter.mesh.scale.y / letter.baseModelScale) * 0.18;
+        letter.scaleVelocity.z += (letter.targetScale.z - letter.mesh.scale.z / letter.baseModelScale) * 0.18;
+        letter.scaleVelocity.multiplyScalar(0.72);
+        letter.mesh.scale.x = Math.max(0.001, letter.mesh.scale.x + letter.scaleVelocity.x * letter.baseModelScale);
+        letter.mesh.scale.y = Math.max(0.001, letter.mesh.scale.y + letter.scaleVelocity.y * letter.baseModelScale);
+        letter.mesh.scale.z = Math.max(0.001, letter.mesh.scale.z + letter.scaleVelocity.z * letter.baseModelScale);
+      }
 
       letter.scale = ((letter.mesh.scale.x + letter.mesh.scale.y) * 0.5) / letter.baseModelScale;
     });

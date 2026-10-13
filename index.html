@@ -19,7 +19,12 @@
         <button type="button"><u>A</u>rchivo</button>
         <button type="button"><u>E</u>ditar</button>
         <button type="button"><u>V</u>er</button>
-        <button type="button"><u>I</u>magen</button>
+        <div class="image-menu-wrap">
+          <button id="imageMenuButton" type="button" aria-expanded="false" aria-controls="imageMenuDropdown"><u>I</u>magen</button>
+          <section id="imageMenuDropdown" class="menu-dropdown" aria-label="Opciones de imagen" hidden>
+            <button id="openPistaButton" class="menu-action" type="button">Ver Pista</button>
+          </section>
+        </div>
         <button type="button"><u>C</u>olores</button>
         <div class="help-menu-wrap">
           <button id="helpMenuButton" type="button" aria-expanded="false" aria-controls="helpDropdown"><u>A</u>yuda</button>
@@ -49,13 +54,6 @@
           <div class="canvas-ruler" aria-hidden="true"><span>▦</span><span>ABD / untitled</span><span>100%</span></div>
           <div class="stage-shell">
             <canvas id="abdCanvas" aria-label="Lienzo interactivo de letras"></canvas>
-            <div class="canvas-doodles" aria-hidden="true">
-              <span class="canvas-doodle doodle-star">✦</span>
-              <span class="canvas-doodle doodle-note">♫</span>
-              <span class="canvas-doodle doodle-face">☻</span>
-              <span class="canvas-doodle doodle-spark">✧</span>
-              <span class="canvas-doodle doodle-note-small">♪</span>
-            </div>
           </div>
         </div>
       </section>
@@ -73,6 +71,17 @@
         <div class="paint-status"><span id="statusText">A Bold Dream</span><span>Para ayuda, haz clic en Ayuda</span></div>
       </footer>
     </main>
+
+    <div id="pistaModal" class="pista-modal" hidden>
+      <div class="pista-modal__window" role="dialog" aria-modal="true" aria-label="Pista visual">
+        <button id="closePistaModal" class="pista-modal__close" type="button" aria-label="Cerrar pista">×</button>
+        <img
+          class="pista-modal__image"
+          alt="Referencia visual del logo ABD"
+          src="./src/logo abd.png"
+        />
+      </div>
+    </div>
 
     <script type="module" src="./src/main.js"></script>
   </body>
