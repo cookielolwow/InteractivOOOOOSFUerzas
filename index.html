@@ -3,11 +3,77 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
-    <title>PinkPantheress - Girl Like Me · Instrumento Visual de Agentes Autónomos</title>
+    <meta name="color-scheme" content="light" />
+    <title>A Bold Dream · ABD</title>
+    <meta name="description" content="A Bold Dream (ABD): sistema tipográfico jugable retro-futurista en Three.js" />
   </head>
   <body>
-    <div id="app"></div>
+    <main id="app" class="paint-window">
+      <div id="uiStickerField" class="ui-sticker-field" aria-hidden="true"></div>
+      <header class="paint-titlebar">
+        <span class="paint-app-icon" aria-hidden="true">A</span>
+        <span class="window-title">A Bold Dream - Paint</span>
+        <div class="window-controls" aria-hidden="true"><span>_</span><span>□</span><span>×</span></div>
+      </header>
+      <nav class="paint-menubar" aria-label="Menú principal">
+        <button type="button"><u>A</u>rchivo</button>
+        <button type="button"><u>E</u>ditar</button>
+        <button type="button"><u>V</u>er</button>
+        <button type="button"><u>I</u>magen</button>
+        <button type="button"><u>C</u>olores</button>
+        <div class="help-menu-wrap">
+          <button id="helpMenuButton" type="button" aria-expanded="false" aria-controls="helpDropdown"><u>A</u>yuda</button>
+          <section id="helpDropdown" class="help-dropdown" aria-label="Ayuda de A Bold Dream" hidden>
+            <div class="help-dropdown-title">Guía rápida</div>
+            <p>Pinta las letras, encuentra sus colores y acomódalas hasta formar el logo.</p>
+            <ol>
+              <li>Elige una muestra de la paleta y toca una letra.</li>
+              <li>Arrastra para moverla; vuelve a tocar para dejarla fija.</li>
+              <li>Usa los gizmos para cambiar escala o rotación.</li>
+            </ol>
+            <button id="autoSolveButton" class="auto-solve-button" type="button">✦ Solucionador Mágico</button>
+          </section>
+        </div>
+      </nav>
+
+      <section class="paint-workspace" aria-label="Espacio de dibujo">
+        <aside class="paint-tools" aria-label="Herramientas">
+          <button class="tool-button is-active" data-tool="select" type="button" title="Seleccionar y arrastrar" aria-label="Seleccionar y arrastrar">⌖</button>
+          <button class="tool-button" data-tool="move" type="button" title="Mover con gizmo" aria-label="Mover con gizmo">✥</button>
+          <button class="tool-button" data-tool="scale" type="button" title="Escalar con gizmo" aria-label="Escalar con gizmo">⤢</button>
+          <button class="tool-button" data-tool="rotate" type="button" title="Rotar con gizmo" aria-label="Rotar con gizmo">⟳</button>
+          <span class="tool-divider"></span>
+          <span class="tool-caption">Herramientas</span>
+        </aside>
+        <div class="canvas-well">
+          <div class="canvas-ruler" aria-hidden="true"><span>▦</span><span>ABD / untitled</span><span>100%</span></div>
+          <div class="stage-shell">
+            <canvas id="abdCanvas" aria-label="Lienzo interactivo de letras"></canvas>
+            <div class="canvas-doodles" aria-hidden="true">
+              <span class="canvas-doodle doodle-star">✦</span>
+              <span class="canvas-doodle doodle-note">♫</span>
+              <span class="canvas-doodle doodle-face">☻</span>
+              <span class="canvas-doodle doodle-spark">✧</span>
+              <span class="canvas-doodle doodle-note-small">♪</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="paint-footer">
+        <div class="paint-colors">
+          <div class="color-current" aria-label="Colores seleccionados">
+            <span class="color-secondary"></span><span id="currentColor" class="color-primary"></span>
+          </div>
+          <div class="palette-area">
+            <div class="palette-label"><span>Colores</span><span id="colorHint">Selecciona un color y toca una letra</span></div>
+            <div id="colorPalette" class="color-palette" aria-label="Paleta de colores"></div>
+          </div>
+        </div>
+        <div class="paint-status"><span id="statusText">A Bold Dream</span><span>Para ayuda, haz clic en Ayuda</span></div>
+      </footer>
+    </main>
+
     <script type="module" src="./src/main.js"></script>
   </body>
 </html>
