@@ -557,10 +557,16 @@ body { display: block; padding: 16px; }
 
 .paint-menubar {
   position: relative;
+  z-index: 6;
   isolation: isolate;
-  overflow: hidden;
+  overflow: visible;
   border-bottom-color: #d79ab6;
   background: #f2d1e2;
+}
+
+.image-menu-wrap .menu-dropdown {
+  right: auto;
+  left: 0;
 }
 
 .paint-menubar button {
@@ -591,7 +597,6 @@ body { display: block; padding: 16px; }
 }
 
 .paint-titlebar::after,
-.paint-menubar::after,
 .paint-tools::after,
 .paint-footer::after,
 .tool-button::after {
@@ -611,6 +616,13 @@ body { display: block; padding: 16px; }
   transform: translate3d(-5%, -1.5%, 0);
   animation: paint-foil-drift 8s ease-in-out infinite alternate;
   will-change: transform;
+}
+
+.paint-menubar::after {
+  inset: 0;
+  background-size: 300% 100%, 300% 230%, 160% 180%, 8px 8px;
+  transform: none;
+  animation: paint-menubar-foil-drift 8s ease-in-out infinite alternate;
 }
 
 .paint-titlebar > *,
@@ -657,6 +669,11 @@ body { display: block; padding: 16px; }
 @keyframes paint-foil-drift {
   from { transform: translate3d(-5%, -1.5%, 0); }
   to { transform: translate3d(5%, 1.5%, 0); }
+}
+
+@keyframes paint-menubar-foil-drift {
+  from { background-position: 100% 50%, 100% 50%, 0% 0%, 0 0; }
+  to { background-position: 0% 50%, 0% 50%, 100% 80%, 8px 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
