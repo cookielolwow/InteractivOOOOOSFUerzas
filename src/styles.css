@@ -549,26 +549,18 @@ body { display: block; padding: 16px; }
 }
 
 .paint-titlebar {
-  background:
-    linear-gradient(112deg, transparent 12%, rgba(255,255,255,.75) 22%, transparent 34%),
-    linear-gradient(115deg, rgba(0,255,238,.58), rgba(66,145,255,.52) 22%, rgba(169,71,255,.56) 43%, rgba(255,61,176,.58) 62%, rgba(255,229,93,.62) 82%, rgba(0,255,220,.58)),
-    radial-gradient(ellipse at 28% 18%, rgba(255,255,255,.76), transparent 52%),
-    #ec8fc0;
-  background-blend-mode: screen, color, soft-light, normal;
-  background-size: 180% 100%, 300% 220%, 160% 170%, auto;
-  animation: paint-foil-shift 9s linear infinite;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: #ec8fc0;
 }
 
 .paint-menubar {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   border-bottom-color: #d79ab6;
-  background:
-    linear-gradient(112deg, transparent 15%, rgba(255,255,255,.7) 24%, transparent 34%),
-    linear-gradient(115deg, rgba(0,255,238,.36), rgba(66,145,255,.34) 22%, rgba(169,71,255,.36) 43%, rgba(255,61,176,.38) 62%, rgba(255,229,93,.4) 82%, rgba(0,255,220,.36)),
-    radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.72), transparent 58%),
-    #f2d1e2;
-  background-blend-mode: screen, color, soft-light, normal;
-  background-size: 190% 100%, 300% 230%, 160% 180%, auto;
-  animation: paint-foil-shift 13s linear infinite;
+  background: #f2d1e2;
 }
 
 .paint-menubar button {
@@ -582,39 +574,62 @@ body { display: block; padding: 16px; }
 
 .paint-tools,
 .paint-footer {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   border-color: #fff #d49ab5 #d49ab5 #fff;
-  background:
-    linear-gradient(112deg, transparent 15%, rgba(255,255,255,.68) 24%, transparent 35%),
-    linear-gradient(115deg, rgba(0,255,238,.34), rgba(66,145,255,.32) 22%, rgba(169,71,255,.34) 43%, rgba(255,61,176,.38) 62%, rgba(255,229,93,.38) 82%, rgba(0,255,220,.34)),
-    radial-gradient(ellipse at 28% 16%, rgba(255,255,255,.76), transparent 58%),
-    repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 1px, transparent 1px 4px),
-    #f0d4e3;
-  background-blend-mode: screen, color, soft-light, soft-light, normal;
-  background-size: 190% 100%, 300% 230%, 160% 180%, 8px 8px, auto;
-  animation: paint-foil-shift 15s linear infinite;
+  background: #f0d4e3;
 }
 
 .tool-button {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   border-color: #cc91ad;
-  background:
-    linear-gradient(112deg, transparent 12%, rgba(255,255,255,.7) 24%, transparent 36%),
-    linear-gradient(115deg, rgba(0,255,238,.34), rgba(76,144,255,.32) 28%, rgba(188,83,255,.34) 55%, rgba(255,220,90,.38) 78%, rgba(0,255,220,.34)),
-    #f1d9e8;
-  background-blend-mode: screen, color, normal;
-  background-size: 180% 100%, 260% 220%, auto;
-  animation: paint-foil-shift 15s linear infinite;
+  background: #f1d9e8;
   color: #57364e;
+}
+
+.paint-titlebar::after,
+.paint-menubar::after,
+.paint-tools::after,
+.paint-footer::after,
+.tool-button::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -100%;
+  pointer-events: none;
+  opacity: .82;
+  background:
+    linear-gradient(112deg, transparent 39%, rgba(255,255,255,.76) 48%, transparent 57%),
+    linear-gradient(115deg, rgba(0,255,238,.58), rgba(66,145,255,.5) 22%, rgba(169,71,255,.54) 43%, rgba(255,61,176,.58) 62%, rgba(255,229,93,.6) 82%, rgba(0,255,220,.58)),
+    radial-gradient(ellipse at 30% 22%, rgba(255,255,255,.72), transparent 50%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,.1) 0 1px, transparent 1px 4px);
+  background-blend-mode: screen, color, soft-light, soft-light;
+  mix-blend-mode: screen;
+  transform: translate3d(-5%, -1.5%, 0);
+  animation: paint-foil-drift 8s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.paint-titlebar > *,
+.paint-menubar > *,
+.paint-tools > *,
+.paint-footer > * {
+  position: relative;
+  z-index: 1;
 }
 
 .tool-button:hover,
 .tool-button.is-active {
   outline-color: #b34284;
-  background:
-    linear-gradient(112deg, transparent 12%, rgba(255,255,255,.82) 24%, transparent 36%),
-    linear-gradient(115deg, rgba(0,255,238,.48), rgba(76,144,255,.45) 28%, rgba(188,83,255,.48) 55%, rgba(255,220,90,.52) 78%, rgba(0,255,220,.48)),
-    #eca9ce;
-  background-blend-mode: screen, color, normal;
-  background-size: 180% 100%, 260% 220%, auto;
+  background: #eca9ce;
+}
+
+.tool-button:hover::after,
+.tool-button.is-active::after {
+  opacity: .95;
 }
 
 .canvas-well {
@@ -639,20 +654,23 @@ body { display: block; padding: 16px; }
   color: #63485b;
 }
 
-@keyframes paint-foil-shift {
-  0% { background-position: 120% 0, 100% 50%, 0% 0%, 0 0, 0 0; }
-  50% { background-position: 50% 0, 0% 100%, 100% 80%, 4px 4px, 0 0; }
-  100% { background-position: -80% 0, -100% 50%, 0% 0%, 8px 8px, 0 0; }
+@keyframes paint-foil-drift {
+  from { transform: translate3d(-5%, -1.5%, 0); }
+  to { transform: translate3d(5%, 1.5%, 0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .paint-titlebar,
   .paint-menubar,
   .paint-tools,
-  .paint-footer,
-  .tool-button {
+  .paint-footer {
     animation: none;
   }
+  .paint-titlebar::after,
+  .paint-menubar::after,
+  .paint-tools::after,
+  .paint-footer::after,
+  .tool-button::after { animation: none; }
   .color-swatch { height: 17px; }
   .palette-area { flex-basis: 170px; }
   .palette-label { font-size: 9px; }
