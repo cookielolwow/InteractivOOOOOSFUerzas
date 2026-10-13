@@ -14,6 +14,12 @@ describe('ABD goal logic', () => {
 
     const targetScales = { A: 1.8, B: 2, D: 2.2 };
     expect(evaluateGoalState({ letters, objective, positions: { A: { x: 0, y: 0 }, B: { x: 0, y: 0 }, D: { x: 0, y: 0 } }, rotations, targetScale: 2, targetScales })).toBe(true);
+    letters[1].rotation.y += 0.23;
+    expect(evaluateGoalState({ letters, objective, positions: { A: { x: 0, y: 0 }, B: { x: 0, y: 0 }, D: { x: 0, y: 0 } }, rotations, targetScale: 2, targetScales })).toBe(false);
+    letters[1].rotation.y -= 0.23;
+    letters[1].rotation.y += 0.21;
+    expect(evaluateGoalState({ letters, objective, positions: { A: { x: 0, y: 0 }, B: { x: 0, y: 0 }, D: { x: 0, y: 0 } }, rotations, targetScale: 2, targetScales })).toBe(true);
+    letters[1].rotation.y -= 0.21;
     letters[1].rotation.z = 0.5;
     expect(evaluateGoalState({ letters, objective, positions: { A: { x: 0, y: 0 }, B: { x: 0, y: 0 }, D: { x: 0, y: 0 } }, rotations, targetScale: 2, targetScales })).toBe(false);
     letters[1].rotation.z = 0;

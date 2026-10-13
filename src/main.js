@@ -1422,9 +1422,16 @@ class ABDApp {
     });
   }
 
-  getLetterProgress(letter) {
-    const { positionFit, scaleFit, rotationFit, colorFit } = this.getLetterMetrics(letter);
+  getLetterProgress(letter, metrics = this.getLetterMetrics(letter)) {
+    const { positionFit, scaleFit, rotationFit, colorFit } = metrics;
     return positionFit * 0.38 + scaleFit * 0.22 + rotationFit * 0.2 + colorFit * 0.2;
+  }
+
+  isLetterPoseCorrect(metrics) {
+    return metrics.positionFit >= 1
+      && metrics.scaleFit >= 1
+      && metrics.rotationFit >= 1
+      && metrics.colorFit >= 1;
   }
 
   getLetterMetrics(letter) {
@@ -1622,13 +1629,15 @@ class ABDApp {
     });
 
     this.letters.forEach((letter, index) => {
-      const progress = this.getLetterProgress(letter);
+      const metrics = this.getLetterMetrics(letter);
+      const progress = this.getLetterProgress(letter, metrics);
       this.audio.updateLetter(letter, progress);
       if (this.state === 'playing') this.updateTargetFeedback(letter);
-      if (progress >= 0.985 && !letter.solved) {
+      const poseCorrect = this.isLetterPoseCorrect(metrics);
+      if (poseCorrect && !letter.solved) {
         letter.solved = true;
         this.audio.playProgressDing();
-      } else if (progress < 0.8) {
+      } else if (!poseCorrect) {
         letter.solved = false;
       }
 

@@ -123,6 +123,7 @@ export class HolographicStickerDOMManager {
     const footerHeight = Math.max(0, footerBottom - footerTop);
     const placed = { menu: [], rail: [], footer: [] };
     this.stickers.forEach(({ element, image, foil, instanceIndex, jitterX, jitterY }) => {
+      element.style.display = '';
       const zone = element.dataset.zone;
       let x;
       let y;
@@ -190,7 +191,10 @@ export class HolographicStickerDOMManager {
         imageHeight *= 0.86;
       }
 
-      if (!placement) return;
+      if (!placement) {
+        element.style.display = 'none';
+        return;
+      }
       placed[zone].push(placement.box);
       element.style.left = `${placement.centerX}px`;
       element.style.top = `${placement.centerY}px`;
