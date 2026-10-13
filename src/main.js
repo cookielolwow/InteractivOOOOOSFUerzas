@@ -8,6 +8,7 @@ import { HolographicStickerDOMManager } from './HolographicStickerDOMManager.js'
 import { PALETTE, colorDistance, evaluateGoalState, resolveNextGoalColor } from './abdGameLogic.js';
 
 const LETTER_SEQUENCE = ['A', 'B', 'D'];
+const publicAssetUrl = (filename) => `${import.meta.env.BASE_URL}${encodeURIComponent(filename)}`;
 const PAINT_COLORS = [
   '#ff3d00', '#ff6d00', '#ff1744', '#ff006e', '#ff2e9f',
   '#ffd600', '#b8ff00', '#00e676', '#00c853', '#00f5d4',
@@ -90,9 +91,9 @@ class FrutigerAudioEngine {
   async loadLetterEffects() {
     if (!this.ctx) return;
     const audioUrls = {
-      A: '/a.MP3',
-      B: '/b.MP3',
-      D: '/d.MP3',
+      A: publicAssetUrl('a.MP3'),
+      B: publicAssetUrl('b.MP3'),
+      D: publicAssetUrl('d.MP3'),
     };
 
     for (const [id, url] of Object.entries(audioUrls)) {
@@ -172,7 +173,7 @@ class FrutigerAudioEngine {
   async loadFinalTrack() {
     if (!this.ctx) return null;
     try {
-      const response = await fetch('/cansioncita fina.MP3');
+      const response = await fetch(publicAssetUrl('cansioncita fina.MP3'));
       if (!response.ok) return null;
       this.trackBuffer = await this.ctx.decodeAudioData((await response.arrayBuffer()).slice(0));
       return this.trackBuffer;
@@ -864,9 +865,9 @@ class ABDApp {
 
   async loadLetters() {
     const letterAssets = {
-      A: '/A.fbx',
-      B: '/B.fbx',
-      D: '/D.fbx',
+      A: publicAssetUrl('A.fbx'),
+      B: publicAssetUrl('B.fbx'),
+      D: publicAssetUrl('D.fbx'),
     };
 
     for (const id of LETTER_SEQUENCE) {

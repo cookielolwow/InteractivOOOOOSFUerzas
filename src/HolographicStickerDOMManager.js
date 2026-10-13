@@ -33,7 +33,7 @@ export class HolographicStickerDOMManager {
   createStickers() {
     STICKER_INSTANCES.forEach((assetIndex, instanceIndex) => {
       const filename = STICKER_FILES[assetIndex];
-      const source = `/${encodeURIComponent(filename)}`;
+      const source = `${import.meta.env.BASE_URL}${encodeURIComponent(filename)}`;
       const random = seededRandom(instanceIndex * 197 + assetIndex * 31);
       const image = document.createElement('img');
       const sticker = document.createElement('div');

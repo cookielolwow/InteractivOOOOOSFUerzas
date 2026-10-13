@@ -127,7 +127,7 @@ export class HolographicStickerManager {
   async load() {
     await Promise.all(STICKER_ASSETS.map(async (filename, index) => {
       try {
-        const texture = await this.loader.loadAsync(`/${encodeURIComponent(filename)}`);
+        const texture = await this.loader.loadAsync(`${import.meta.env.BASE_URL}${encodeURIComponent(filename)}`);
         texture.colorSpace = THREE.SRGBColorSpace;
         texture.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
         const aspect = texture.image.width / texture.image.height;
