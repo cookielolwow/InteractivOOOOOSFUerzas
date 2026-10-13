@@ -564,18 +564,131 @@ body { display: block; padding: 16px; }
   background: #f2d1e2;
 }
 
+html,
+body {
+  background:
+    radial-gradient(ellipse at 12% 8%, rgba(5, 199, 242, .24), transparent 32%),
+    radial-gradient(ellipse at 88% 92%, rgba(242, 98, 65, .2), transparent 36%),
+    linear-gradient(135deg, #d4cab6, #f4eee2 48%, #e8d9c6);
+}
+
+#app.paint-window {
+  border-color: #8f583a;
+  background: linear-gradient(145deg, rgba(255, 252, 244, .93), rgba(212, 202, 182, .88));
+  box-shadow: 0 22px 60px rgba(79, 48, 31, .2), 8px 8px 0 #8f583a;
+}
+
+.paint-titlebar {
+  background: linear-gradient(105deg, #05c7f2 0%, #78c9bd 17%, #f2c641 34%, #d4cab6 51%, #f26241 72%, #8f583a 100%);
+}
+
+.paint-app-icon {
+  color: #245445;
+  background: linear-gradient(135deg, #fffdf5, #05c7f2 48%, #f2c641);
+}
+
+.window-controls span {
+  color: #5e3d2d;
+  background: linear-gradient(180deg, #fffdf5, #d4cab6);
+  box-shadow: inset -1px -1px #8f583a;
+}
+
+.paint-menubar {
+  border-bottom-color: #b39a7b;
+  background: linear-gradient(90deg, #f6f0e4, #d4cab6 56%, #ead2bd);
+}
+
+.paint-menubar button {
+  color: #553a2b;
+}
+
+.paint-menubar button:hover {
+  border-color: #fff8e9 #a97655 #a97655 #fff8e9;
+  background: linear-gradient(135deg, rgba(5, 199, 242, .3), rgba(242, 198, 65, .38), rgba(242, 98, 65, .24));
+}
+
 .image-menu-wrap .menu-dropdown {
   right: auto;
   left: 0;
 }
 
-.paint-menubar button {
-  color: #4d2944;
+.menu-dropdown,
+.help-dropdown {
+  border-color: #fff8e9;
+  outline-color: #8f583a;
+  background: linear-gradient(145deg, #faf6ec, #d4cab6);
+  box-shadow: 4px 5px 0 rgba(79, 48, 31, .3), 0 10px 22px rgba(79, 48, 31, .2);
+  color: #4e392c;
 }
 
-.paint-menubar button:hover {
-  border-color: #fff #c47b9e #c47b9e #fff;
-  background: rgba(255,255,255,.66);
+.help-dropdown-title {
+  background: linear-gradient(100deg, #05c7f2, #f2c641 36%, #f26241 72%, #8f583a);
+  text-shadow: 1px 1px rgba(79, 48, 31, .38);
+}
+
+.menu-action,
+.auto-solve-button {
+  border-color: #70472f;
+  background: linear-gradient(105deg, #05aeca, #f2c641 34%, #f26241 70%, #8f583a);
+  box-shadow: 2px 2px 0 #70472f;
+}
+
+.pista-modal__window {
+  border-color: #8f583a;
+  background: linear-gradient(145deg, #fffaf0, #d4cab6);
+  box-shadow: 0 0 0 3px rgba(255, 250, 240, .85), 8px 8px 0 rgba(79, 48, 31, .28);
+}
+
+.pista-modal__close {
+  border-color: #8f583a;
+  background: linear-gradient(135deg, #fffaf0, #05c7f2 52%, #f2c641);
+  color: #553a2b;
+}
+
+.paint-tools,
+.paint-footer {
+  border-color: #fffaf0 #ae8a6c #ae8a6c #fffaf0;
+  background: linear-gradient(135deg, #f6f0e4, #d4cab6 58%, #ead1bd);
+}
+
+.tool-button {
+  border-color: #aa8062;
+  background: linear-gradient(145deg, #fffaf0, #e6ddcd 62%, #d8e9e2);
+  color: #59402f;
+  box-shadow: inset 1px 1px #fffaf0, 1px 1px #b49a7f;
+}
+
+.tool-button:hover,
+.tool-button.is-active {
+  outline-color: #05aeca;
+  background: linear-gradient(135deg, #05c7f2 0%, #f2c641 52%, #f26241 100%);
+}
+
+.tool-divider {
+  border-top-color: #b39a7b;
+  border-bottom-color: #fffaf0;
+}
+
+.tool-caption,
+.palette-label,
+.paint-status,
+.canvas-ruler {
+  color: #5d4534;
+}
+
+.canvas-well {
+  border-color: #aa8062;
+  background: linear-gradient(135deg, #d4cab6, #e9dfcd);
+}
+
+.stage-shell {
+  --stage-dot-color: rgba(5, 145, 168, .2);
+  border-color: #aa8062;
+  background-color: #f5f0e5;
+}
+
+.paint-status {
+  border-top-color: #b69b7d;
 }
 
 .paint-tools,
@@ -583,20 +696,21 @@ body { display: block; padding: 16px; }
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  border-color: #fff #d49ab5 #d49ab5 #fff;
-  background: #f0d4e3;
+  border-color: #fffaf0 #ae8a6c #ae8a6c #fffaf0;
+  background: linear-gradient(135deg, #f6f0e4, #d4cab6 58%, #ead1bd);
 }
 
 .tool-button {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  border-color: #cc91ad;
-  background: #f1d9e8;
-  color: #57364e;
+  border-color: #aa8062;
+  background: linear-gradient(145deg, #fffaf0, #e6ddcd 62%, #d8e9e2);
+  color: #59402f;
 }
 
 .paint-titlebar::after,
+.paint-menubar::after,
 .paint-tools::after,
 .paint-footer::after,
 .tool-button::after {
@@ -605,10 +719,10 @@ body { display: block; padding: 16px; }
   z-index: 0;
   inset: -100%;
   pointer-events: none;
-  opacity: .82;
+  opacity: .72;
   background:
     linear-gradient(112deg, transparent 39%, rgba(255,255,255,.76) 48%, transparent 57%),
-    linear-gradient(115deg, rgba(0,255,238,.58), rgba(66,145,255,.5) 22%, rgba(169,71,255,.54) 43%, rgba(255,61,176,.58) 62%, rgba(255,229,93,.6) 82%, rgba(0,255,220,.58)),
+    linear-gradient(115deg, rgba(5,199,242,.64), rgba(242,198,65,.6) 27%, rgba(212,202,182,.62) 48%, rgba(242,98,65,.62) 72%, rgba(143,88,58,.6)),
     radial-gradient(ellipse at 30% 22%, rgba(255,255,255,.72), transparent 50%),
     repeating-linear-gradient(135deg, rgba(255,255,255,.1) 0 1px, transparent 1px 4px);
   background-blend-mode: screen, color, soft-light, soft-light;
@@ -620,6 +734,13 @@ body { display: block; padding: 16px; }
 
 .paint-menubar::after {
   inset: 0;
+  background:
+    linear-gradient(112deg, transparent 39%, rgba(255,255,255,.76) 48%, transparent 57%),
+    linear-gradient(115deg, rgba(5,199,242,.64), rgba(242,198,65,.6) 27%, rgba(212,202,182,.62) 48%, rgba(242,98,65,.62) 72%, rgba(143,88,58,.6)),
+    radial-gradient(ellipse at 30% 22%, rgba(255,255,255,.72), transparent 50%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,.1) 0 1px, transparent 1px 4px);
+  background-blend-mode: screen, color, soft-light, soft-light;
+  mix-blend-mode: screen;
   background-size: 300% 100%, 300% 230%, 160% 180%, 8px 8px;
   transform: none;
   animation: paint-menubar-foil-drift 8s ease-in-out infinite alternate;
@@ -635,35 +756,13 @@ body { display: block; padding: 16px; }
 
 .tool-button:hover,
 .tool-button.is-active {
-  outline-color: #b34284;
-  background: #eca9ce;
+  outline-color: #05aeca;
+  background: linear-gradient(135deg, #05c7f2 0%, #f2c641 52%, #f26241 100%);
 }
 
 .tool-button:hover::after,
 .tool-button.is-active::after {
-  opacity: .95;
-}
-
-.canvas-well {
-  border-color: #d69bb7;
-  background: #edd8e3;
-}
-
-.canvas-ruler {
-  color: #62435a;
-}
-
-.paint-footer {
-  border-top-color: #fff;
-}
-
-.paint-status {
-  border-top-color: #d5a6bb;
-  color: #63485b;
-}
-
-.palette-label {
-  color: #63485b;
+  opacity: .86;
 }
 
 @keyframes paint-foil-drift {

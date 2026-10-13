@@ -572,15 +572,15 @@ class ABDApp {
   }
 
   setupLights() {
-    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.32);
     this.scene.add(ambient);
 
-    const keyLight = new THREE.DirectionalLight(0xffe3b0, 1.8);
+    const keyLight = new THREE.DirectionalLight(0xffe3b0, 1.25);
     keyLight.position.set(5, 8, 12);
     keyLight.castShadow = true;
     this.scene.add(keyLight);
 
-    const rimLight = new THREE.DirectionalLight(0x74d9ff, 0.7);
+    const rimLight = new THREE.DirectionalLight(0x74d9ff, 0.38);
     rimLight.position.set(-8, 5, -6);
     this.scene.add(rimLight);
 
@@ -589,9 +589,9 @@ class ABDApp {
     this.scene.add(bounceLight);
 
     this.glitterLights = [
-      new THREE.PointLight(0x28e4ff, 4.5, 18, 2),
-      new THREE.PointLight(0xff31a8, 4, 18, 2),
-      new THREE.PointLight(0xc8ff24, 3.5, 18, 2),
+      new THREE.PointLight(0x28e4ff, 0.9, 18, 2),
+      new THREE.PointLight(0xff31a8, 0.8, 18, 2),
+      new THREE.PointLight(0xc8ff24, 0.7, 18, 2),
     ];
     this.glitterLights.forEach((light) => this.scene.add(light));
   }
@@ -599,18 +599,18 @@ class ABDApp {
   createBalloonMaterial(hexColor) {
     const material = new THREE.MeshPhysicalMaterial({
       color: new THREE.Color(hexColor),
-      emissive: new THREE.Color(hexColor).multiplyScalar(0.08),
-      emissiveIntensity: 0.4,
-      roughness: 0.16,
+      emissive: new THREE.Color(hexColor).multiplyScalar(0.04),
+      emissiveIntensity: 0.18,
+      roughness: 0.24,
       metalness: 0,
-      transmission: 0.62,
-      thickness: 1,
+      transmission: 0,
+      thickness: 0.65,
       ior: 1.2,
-      clearcoat: 0.95,
-      clearcoatRoughness: 0.1,
+      clearcoat: 0.78,
+      clearcoatRoughness: 0.16,
       attenuationColor: new THREE.Color(hexColor),
       attenuationDistance: 1.6,
-      envMapIntensity: 0.85,
+      envMapIntensity: 0.48,
       transparent: false,
       opacity: 1,
     });
@@ -1211,8 +1211,8 @@ class ABDApp {
     letter.mesh.traverse((child) => {
       if (child.isMesh && child.material) {
         child.material.color.copy(visualColor);
-        child.material.emissive = new THREE.Color(color).multiplyScalar(0.18);
-        child.material.emissiveIntensity = 0.42;
+        child.material.emissive = new THREE.Color(color).multiplyScalar(0.06);
+        child.material.emissiveIntensity = 0.2;
       }
     });
     if (playSound) {
@@ -1228,7 +1228,7 @@ class ABDApp {
     visualColor.setHSL(
       hsl.h,
       THREE.MathUtils.clamp(hsl.s, 0.92, 1),
-      THREE.MathUtils.clamp(hsl.l, 0.42, 0.55),
+      THREE.MathUtils.clamp(hsl.l, 0.28, 0.4),
     );
     return visualColor;
   }
@@ -1719,8 +1719,8 @@ class ABDApp {
         letter.mesh.traverse((child) => {
           if (child.isMesh && child.material) {
             child.material.color.copy(victoryColor);
-            child.material.emissive.copy(victoryColor).multiplyScalar(0.12);
-            child.material.emissiveIntensity = 0.3;
+            child.material.emissive.copy(victoryColor).multiplyScalar(0.08);
+            child.material.emissiveIntensity = 0.18;
           }
         });
       } else {
@@ -1729,8 +1729,8 @@ class ABDApp {
             child.material.opacity = ditherOpacity;
             const targetColor = new THREE.Color(letter.targetColor).lerp(LETTER_CONFIRMATION_COLOR, letter.confirmationProgress);
             child.material.color.lerp(targetColor, 0.12);
-            child.material.emissive = targetColor.clone().multiplyScalar(0.24);
-            child.material.emissiveIntensity = 0.35;
+            child.material.emissive = targetColor.clone().multiplyScalar(0.08);
+            child.material.emissiveIntensity = 0.18;
           }
         });
       }
