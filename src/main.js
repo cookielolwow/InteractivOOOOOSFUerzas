@@ -9,11 +9,7 @@ import { PALETTE, colorDistance, rotationDistance } from './abdGameLogic.js';
 
 const LETTER_SEQUENCE = ['A', 'B', 'D'];
 const publicAssetUrl = (filename) => `${import.meta.env.BASE_URL}${encodeURIComponent(filename)}`;
-const PAINT_COLORS = [
-  '#ff3d00', '#ff6d00', '#ff1744', '#ff006e', '#ff2e9f',
-  '#ffd600', '#b8ff00', '#00e676', '#00c853', '#00f5d4',
-  '#00d1ff', '#00a8ff', '#0057ff', '#4833ff', '#a100ff',
-];
+const PAINT_COLORS = [...PALETTE];
 const LETTER_CONFIRMATION_COLOR = new THREE.Color('#22c55e');
 const TARGET_SCALE = 2.6;
 const LETTER_TARGET_SCALES = { A: TARGET_SCALE * 0.85, B: TARGET_SCALE, D: TARGET_SCALE * 1.15 };
@@ -1216,8 +1212,13 @@ class ABDApp {
       }
     });
     if (playSound) {
+      if (colorDistance(color, this.goalColors[letter.id]) <= 60) {
+        if (!letter.correctParameters.has('color')) this.audio.playParameterCheck('color');
+        letter.correctParameters.add('color');
+      } else {
+        letter.correctParameters.delete('color');
+      }
       this.audio.resume().then(() => this.audio.playSparkle()).catch(() => {});
-      this.playJellyBounce(letter, 0.11, 0.24);
     }
   }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { evaluateGoalState, resolveNextGoalColor } from './abdGameLogic.js';
+import { evaluateGoalState, PALETTE, resolveNextGoalColor } from './abdGameLogic.js';
 
 describe('ABD goal logic', () => {
   it('flags a solved board only when all letters match the target goal and are in position', () => {
@@ -30,6 +30,11 @@ describe('ABD goal logic', () => {
   it('chooses a color from the allowed palette', () => {
     const palette = ['#ff5da2', '#6ef3ff', '#ffd166', '#7af76a', '#8ea7ff'];
     expect(palette.includes(resolveNextGoalColor(palette))).toBe(true);
+  });
+
+  it('keeps every available paint color unique and in the shared goal palette', () => {
+    expect(PALETTE).toHaveLength(20);
+    expect(new Set(PALETTE).size).toBe(PALETTE.length);
   });
 
   it('rejects rotation when individual axis errors combine beyond the orientation tolerance', () => {

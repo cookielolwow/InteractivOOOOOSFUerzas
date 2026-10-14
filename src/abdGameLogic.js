@@ -1,4 +1,9 @@
-export const PALETTE = ['#d94300', '#0646bc', '#d00052', '#8f5b00', '#2b7700'];
+export const PALETTE = [
+  '#d94300', '#ff3d00', '#ff6d00', '#8f5b00', '#ffd600',
+  '#b8ff00', '#2b7700', '#00c853', '#00e676', '#00f5d4',
+  '#00d1ff', '#00a8ff', '#0646bc', '#0057ff', '#4833ff',
+  '#a100ff', '#ff2e9f', '#ff006e', '#d00052', '#ff1744',
+];
 
 export function normalizeHex(hex) {
   const value = `${hex}`.trim().replace('#', '');
